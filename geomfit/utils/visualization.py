@@ -41,15 +41,16 @@ class Visualization:
         """
         fig, ax = plt.subplots(figsize=figsize)
         
-        # Scatter the observed data
+        # 散点：画出观测数据点（真实值），半透明避免点重叠时看不清
         ax.scatter(x, y_true, alpha=0.5, label='Data', color='blue')
         
-        # Sort x so the predicted curve is drawn as a smooth line
+        # 先按 x 排序：预测值对应的 x 未必有序，若直接连线会画出
+        # 来回交叉的折线；排序后按顺序连线才是平滑的拟合曲线。
         sort_idx = np.argsort(x)
         x_sorted = x[sort_idx]
         y_pred_sorted = y_pred[sort_idx]
         
-        # Plot the fitted curve
+        # 画出拟合曲线（红色实线）
         ax.plot(x_sorted, y_pred_sorted, 'r-', linewidth=2, label='Fit')
         
         ax.set_xlabel(xlabel)
@@ -130,14 +131,16 @@ class Visualization:
         fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
         axes = axes.flatten() if n_basis > 1 else [axes]
         
+        # 逐个子图绘制基函数。注意张量积基（tensor-product）的处理方式：
+        # 沿"主维度" basis.dim 取值扫描，其余维度全部置 0——这样画出来的是
+        # 该基函数在主维度方向上的剖面/切片，便于观察单个基的形状。
         for i, basis in enumerate(basis_set.bases):
             if i >= len(axes):
                 break
                 
             ax = axes[i]
             
-            # Evaluate each basis: tensor-product bases are sliced along the
-            # primary dimension, with all other dimensions set to zero
+            # 在每个 x 网格点上构造字典形式的输入点并求值
             y = np.zeros_like(x)
             for j, x_val in enumerate(x):
                 point = {d: 0.0 for d in basis.dims}
@@ -150,7 +153,7 @@ class Visualization:
             ax.set_ylabel("φ(x)")
             ax.grid(True, alpha=0.3)
         
-        # Hide unused subplots
+        # 隐藏多余的空白子图（基函数数量不足网格容量时）
         for i in range(n_basis, len(axes)):
             axes[i].axis('off')
         
@@ -279,10 +282,10 @@ class Visualization:
         
         bars = ax.bar(indices, coefficients, alpha=0.7, color='steelblue')
         
-        # Annotate each bar with its value
+        # 在每个柱子上方/下方标注数值，便于直接读出系数大小
         for bar in bars:
             height = bar.get_height()
-            if abs(height) > 0.01:  # Label only values above the display threshold
+            if abs(height) > 0.01:  # 只标注绝对值超过显示阈值 0.01 的柱子，避免图面杂乱
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.3f}', ha='center', va='bottom' if height >= 0 else 'top',
                        fontsize=8)
@@ -326,7 +329,7 @@ class Visualization:
         ax.set_ylabel('Loss')
         ax.set_title(title)
         ax.grid(True, alpha=0.3)
-        ax.set_yscale('log')  # Log scale to visualize the loss decay
+        ax.set_yscale('log')  # 用对数坐标：损失通常指数级下降，线性坐标下前期剧烈、后期贴底看不出变化
         plt.tight_layout()
         
         return fig
@@ -398,11 +401,11 @@ class Visualization:
         dashboard_fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
         axes = axes.flatten() if n_figures > 1 else [axes]
         
-        # Hide all axes initially
+        # 先把所有轴隐藏，之后只对用到的面板重新开启
         for ax in axes:
             ax.axis('off')
         
-        # Copy each figure into the dashboard
+        # 把每个子图复制到仪表盘对应的面板里
         for i, fig in enumerate(figures):
             if i >= len(axes):
                 break
@@ -410,13 +413,14 @@ class Visualization:
             dashboard_ax = axes[i]
             dashboard_ax.axis('on')
             
-            # Placeholder: a full implementation would extract and redraw each
-            # figure's artists; here each panel shows a label only
+            # 占位实现：完整实现需要提取并重绘每个 figure 里的所有
+            # artist（线条、图例等），这里每个面板只显示一个占位标签；
+            # 标题优先取原图的 suptitle，否则用默认的 "Plot i"。
             dashboard_ax.text(0.5, 0.5, f'Figure {i+1}', 
                             ha='center', va='center', fontsize=12)
             dashboard_ax.set_title(fig._suptitle.get_text() if fig._suptitle else f'Plot {i+1}')
         
-        # Hide unused axes
+        # 隐藏未使用的面板
         for i in range(n_figures, len(axes)):
             axes[i].axis('off')
         

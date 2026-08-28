@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')  # print Unicode math on any console (e.g. GBK Windows)
+    sys.stdout.reconfigure(encoding='utf-8')  # 把标准输出重设为 UTF-8 编码,确保数学符号(如 φ、Σ)能在任何控制台正常打印(例如 Windows 的 GBK 代码页)
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -24,48 +24,48 @@ def demo_polynomial_basis():
     print("Polynomial basis function demo")
     print("=" * 60)
     
-    # Create a basis set
+    # 创建一个空的基函数集合容器,后续把各个多项式基依次加入
     basis_set = BasisSet()
     
-    # Add polynomial basis functions
+    # 添加 0 到 4 阶的多项式基函数
     print("Adding polynomial basis functions:")
-    for order in range(5):  # polynomials of order 0..4
+    for order in range(5):  # 循环生成 0..4 阶多项式基:常数、x、x²、x³、x⁴
         basis = BasisFactory.polynomial(dim=0, order=order)
         basis_set.add_basis(basis)
         print(f"  - {basis.name}")
     
-    # Generate test data
+    # 生成一维测试数据:x 在 [0, 1] 上均匀取 100 个点
     x = np.linspace(0, 1, 100)
-    y_true = np.sin(2 * np.pi * x)  # true function: sine wave
-    y = y_true + 0.1 * np.random.randn(len(x))  # add noise
+    y_true = np.sin(2 * np.pi * x)  # 真实函数:一个正弦波 sin(2πx)
+    y = y_true + 0.1 * np.random.randn(len(x))  # 叠加高斯噪声(标准差 0.1),模拟带噪声的观测
     
     data = MultiDimData({0: x})
     
-    # Discrete inner product
+    # 构造离散内积:在数据点上求和而非连续积分(is_continuous=False)
     inner_product = InnerProduct(is_continuous=False)
     
-    # Create a solver
+    # 创建函数求解器,并依次装配基函数、内积与数据
     solver = FunctionalSolver()
     solver.set_basis(basis_set)
     solver.set_inner_product(inner_product)
     solver.load_data(data, y)
     
-    # Solve
+    # 求解:得到使 ‖y − Φc‖² 最小的组合系数 c(其中 Φ 是设计矩阵)
     print("\nSolving...")
     coefficients = solver.solve()
     print(f"Coefficients: {coefficients}")
     
-    # Predict
+    # 预测:用求得的系数在数据点处计算拟合值 ŷ
     y_pred = solver.predict(data)
     
-    # Compute the error
+    # 计算均方误差(MSE),衡量拟合质量
     mse = np.mean((y_pred - y)**2)
     print(f"Mean squared error (MSE): {mse:.6f}")
     
-    # Visualization
+    # 可视化:2×2 共 4 个子图,分别展示拟合、基函数、系数与残差
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. Data fit
+    # 1. 数据拟合对比:散点为带噪数据,绿线为真实函数,红线为多项式基拟合结果
     ax1 = axes[0, 0]
     ax1.scatter(x, y, alpha=0.5, label='Data', s=10)
     ax1.plot(x, y_true, 'g-', linewidth=2, label='True function')
@@ -76,7 +76,7 @@ def demo_polynomial_basis():
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. Basis functions
+    # 2. 基函数形状:在 [0,1] 上逐点计算每个多项式基函数并画成曲线
     ax2 = axes[0, 1]
     x_plot = np.linspace(0, 1, 200)
     for i, basis in enumerate(basis_set.bases):
@@ -90,7 +90,7 @@ def demo_polynomial_basis():
     ax2.legend()
     ax2.grid(True, alpha=0.3)
     
-    # 3. Coefficients
+    # 3. 系数柱状图:展示各基函数被赋予的权重(若高阶项系数接近 0,说明数据不需要那么高阶的项)
     ax3 = axes[1, 0]
     indices = np.arange(len(coefficients))
     ax3.bar(indices, coefficients, alpha=0.7, color='steelblue')
@@ -99,7 +99,7 @@ def demo_polynomial_basis():
     ax3.set_title('Basis coefficients')
     ax3.grid(True, alpha=0.3, axis='y')
     
-    # 4. Residuals
+    # 4. 残差图:y − ŷ,理想情况下残差应围绕 0 随机分布、不呈现系统性结构
     ax4 = axes[1, 1]
     residuals = y - y_pred
     ax4.scatter(x, residuals, alpha=0.6, color='purple', s=10)
@@ -121,55 +121,55 @@ def demo_fourier_basis():
     print("Fourier basis function demo")
     print("=" * 60)
     
-    # Create a basis set
+    # 创建一个空的基函数集合容器
     basis_set = BasisSet()
     
-    # Add Fourier basis functions
+    # 添加傅里叶基函数:常数项 + 不同频率的正弦/余弦
     print("Adding Fourier basis functions:")
-    # Constant term
+    # 常数项:频率 freq=0 的傅里叶基就是常数函数,对应信号中的直流分量
     bases = BasisFactory.fourier(dim=0, freq=0, L=1.0)
     for basis in bases:
         basis_set.add_basis(basis)
         print(f"  - {basis.name}")
     
-    # Fourier bases for frequencies 1..3
+    # 依次添加频率 1 到 3 的傅里叶基(每个频率包含 sin 和 cos 两个分量)
     for freq in range(1, 4):
         bases = BasisFactory.fourier(dim=0, freq=freq, L=1.0)
         for basis in bases:
             basis_set.add_basis(basis)
             print(f"  - {basis.name}")
     
-    # Periodic test data
+    # 生成周期性测试数据:真实函数是两个周期分量的叠加,正好落在傅里叶基张成的空间内
     x = np.linspace(0, 1, 100)
-    y_true = np.sin(2 * np.pi * 2 * x) + 0.5 * np.cos(2 * np.pi * 3 * x)  # mixed sine/cosine waves
-    y = y_true + 0.05 * np.random.randn(len(x))  # add a small amount of noise
+    y_true = np.sin(2 * np.pi * 2 * x) + 0.5 * np.cos(2 * np.pi * 3 * x)  # 真实函数:2 倍频正弦 + 3 倍频余弦的叠加
+    y = y_true + 0.05 * np.random.randn(len(x))  # 叠加少量噪声(标准差 0.05)
     
     data = MultiDimData({0: x})
     
-    # Discrete inner product
+    # 构造离散内积(基于数据点求和)
     inner_product = InnerProduct(is_continuous=False)
     
-    # Create a solver
+    # 创建求解器并装配基函数、内积与数据
     solver = FunctionalSolver()
     solver.set_basis(basis_set)
     solver.set_inner_product(inner_product)
     solver.load_data(data, y)
     
-    # Solve
+    # 求解组合系数
     print("\nSolving...")
     coefficients = solver.solve()
     
-    # Predict
+    # 预测
     y_pred = solver.predict(data)
     
-    # Compute the error
+    # 计算均方误差
     mse = np.mean((y_pred - y)**2)
     print(f"Mean squared error (MSE): {mse:.6f}")
     
-    # Visualization
+    # 可视化
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. Data fit
+    # 1. 数据拟合对比
     ax1 = axes[0, 0]
     ax1.scatter(x, y, alpha=0.5, label='Data', s=10)
     ax1.plot(x, y_true, 'g-', linewidth=2, label='True function')
@@ -180,10 +180,10 @@ def demo_fourier_basis():
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. Basis functions (first few)
+    # 2. 基函数形状:只画前 6 个基函数,避免图例过密
     ax2 = axes[0, 1]
     x_plot = np.linspace(0, 1, 200)
-    for i, basis in enumerate(basis_set.bases[:6]):  # show the first 6 only
+    for i, basis in enumerate(basis_set.bases[:6]):  # 只取前 6 个基函数用于绘图
         y_basis = np.zeros_like(x_plot)
         for j, x_val in enumerate(x_plot):
             y_basis[j] = basis.func(x_val, **basis.params)
@@ -194,7 +194,7 @@ def demo_fourier_basis():
     ax2.legend(fontsize=8)
     ax2.grid(True, alpha=0.3)
     
-    # 3. Coefficients
+    # 3. 系数柱状图:每个基函数(按 sin/cos 与频率命名)对应一个系数
     ax3 = axes[1, 0]
     indices = np.arange(len(coefficients))
     basis_names = [basis.name for basis in basis_set.bases]
@@ -206,9 +206,9 @@ def demo_fourier_basis():
     ax3.set_xticklabels(basis_names, rotation=45, ha='right', fontsize=8)
     ax3.grid(True, alpha=0.3, axis='y')
     
-    # 4. Spectrum
+    # 4. 频谱图:把系数按频率归类,观察信号能量在各频率上的分布
     ax4 = axes[1, 1]
-    # Extract frequencies and coefficient magnitudes
+    # 从基函数名称中解析出频率,并取系数的绝对值作为该频率分量的幅度
     freqs = []
     coeff_mags = []
     for i, basis in enumerate(basis_set.bases):
@@ -216,7 +216,7 @@ def demo_fourier_basis():
             freq = int(basis.name.split('cos')[1])
         elif 'sin' in basis.name:
             freq = int(basis.name.split('sin')[1])
-        else:  # constant term
+        else:  # 常数项:名称中不含 sin/cos,频率记为 0
             freq = 0
         freqs.append(freq)
         coeff_mags.append(abs(coefficients[i]))
@@ -239,47 +239,47 @@ def demo_legendre_basis():
     print("Legendre polynomial basis demo")
     print("=" * 60)
     
-    # Create a basis set
+    # 创建一个空的基函数集合容器
     basis_set = BasisSet()
     
-    # Add Legendre polynomial basis functions
+    # 添加 0 到 5 阶的勒让德多项式基函数
     print("Adding Legendre polynomial basis functions:")
-    for order in range(6):  # Legendre polynomials of order 0..5
+    for order in range(6):  # 勒让德多项式阶数 0..5
         basis = BasisFactory.legendre(dim=0, order=order)
         basis_set.add_basis(basis)
         print(f"  - {basis.name}")
     
-    # Test data on [-1, 1]
+    # 测试数据定义在 [-1, 1] 上:这是勒让德多项式的自然定义域,正交性在该区间上成立
     x = np.linspace(-1, 1, 100)
-    y_true = np.exp(-x**2)  # Gaussian function
-    y = y_true + 0.05 * np.random.randn(len(x))  # add a small amount of noise
+    y_true = np.exp(-x**2)  # 真实函数:高斯钟形曲线 exp(−x²)
+    y = y_true + 0.05 * np.random.randn(len(x))  # 叠加少量噪声(标准差 0.05)
     
     data = MultiDimData({0: x})
     
-    # Discrete inner product
+    # 构造离散内积
     inner_product = InnerProduct(is_continuous=False)
     
-    # Create a solver
+    # 创建求解器并装配
     solver = FunctionalSolver()
     solver.set_basis(basis_set)
     solver.set_inner_product(inner_product)
     solver.load_data(data, y)
     
-    # Solve
+    # 求解组合系数
     print("\nSolving...")
     coefficients = solver.solve()
     
-    # Predict
+    # 预测
     y_pred = solver.predict(data)
     
-    # Compute the error
+    # 计算均方误差
     mse = np.mean((y_pred - y)**2)
     print(f"Mean squared error (MSE): {mse:.6f}")
     
-    # Visualization
+    # 可视化
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. Data fit
+    # 1. 数据拟合对比
     ax1 = axes[0, 0]
     ax1.scatter(x, y, alpha=0.5, label='Data', s=10)
     ax1.plot(x, y_true, 'g-', linewidth=2, label='True function')
@@ -290,7 +290,7 @@ def demo_legendre_basis():
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. Basis functions
+    # 2. 基函数形状:勒让德多项式 P₀(x)..P₅(x) 的曲线
     ax2 = axes[0, 1]
     x_plot = np.linspace(-1, 1, 200)
     for i, basis in enumerate(basis_set.bases):
@@ -304,7 +304,7 @@ def demo_legendre_basis():
     ax2.legend()
     ax2.grid(True, alpha=0.3)
     
-    # 3. Coefficients
+    # 3. 系数柱状图:按多项式阶数 n 展示各系数
     ax3 = axes[1, 0]
     indices = np.arange(len(coefficients))
     ax3.bar(indices, coefficients, alpha=0.7, color='steelblue')
@@ -315,13 +315,13 @@ def demo_legendre_basis():
     ax3.set_xticklabels([f'n={i}' for i in indices])
     ax3.grid(True, alpha=0.3, axis='y')
     
-    # 4. Orthogonality check
+    # 4. 正交性检验:计算 Gram 矩阵并用热图展示
     ax4 = axes[1, 1]
-    # Compute the Gram matrix
+    # 先求设计矩阵 Φ(每列是一个基函数在所有数据点上的取值),再计算 Gram 矩阵 G = ΦᵀΦ
     Phi = basis_set.evaluate_all(data)
     G = inner_product.compute_gram_matrix(Phi, data)
     
-    # Heatmap of the Gram matrix
+    # Gram 矩阵热图:若基函数两两正交,非对角元应接近 0,矩阵近似为对角阵
     im = ax4.imshow(G, cmap='viridis', aspect='auto')
     ax4.set_xlabel('Basis index')
     ax4.set_ylabel('Basis index')
@@ -340,13 +340,13 @@ def demo_custom_basis():
     print("Custom basis function demo")
     print("=" * 60)
     
-    # Create a basis set
+    # 创建一个空的基函数集合容器
     basis_set = BasisSet()
     
-    # Define custom basis functions
+    # 定义并添加自定义基函数:高斯型、线性、常数等,演示工厂方法的灵活性
     print("Adding custom basis functions:")
     
-    # 1. Gaussian function
+    # 1. 高斯基函数:以 center 为中心、sigma 为宽度的高斯钟形曲线
     def gaussian_func(x, center=0.0, sigma=1.0):
         return np.exp(-(x - center)**2 / (2 * sigma**2))
     
@@ -359,7 +359,7 @@ def demo_custom_basis():
     basis_set.add_basis(gaussian_basis)
     print(f"  - {gaussian_basis.name}")
     
-    # 2. Gaussian at a different center
+    # 2. 中心移到 0.5 处的高斯基函数
     gaussian_basis2 = BasisFactory.custom(
         dim=0,
         name="Gaussian_center0.5_sigma0.2",
@@ -369,7 +369,7 @@ def demo_custom_basis():
     basis_set.add_basis(gaussian_basis2)
     print(f"  - {gaussian_basis2.name}")
     
-    # 3. Gaussian at a different center
+    # 3. 中心移到 1.0 处的高斯基函数(三个高斯基共同覆盖 [0, 1])
     gaussian_basis3 = BasisFactory.custom(
         dim=0,
         name="Gaussian_center1.0_sigma0.2",
@@ -379,7 +379,7 @@ def demo_custom_basis():
     basis_set.add_basis(gaussian_basis3)
     print(f"  - {gaussian_basis3.name}")
     
-    # 4. Linear function
+    # 4. 线性基函数:slope·x + intercept
     def linear_func(x, slope=1.0, intercept=0.0):
         return slope * x + intercept
     
@@ -392,7 +392,7 @@ def demo_custom_basis():
     basis_set.add_basis(linear_basis)
     print(f"  - {linear_basis.name}")
     
-    # 5. Constant function
+    # 5. 常数基函数:恒等于 value,用于拟合截距/偏置
     def constant_func(x, value=1.0):
         return value
     
@@ -405,38 +405,38 @@ def demo_custom_basis():
     basis_set.add_basis(constant_basis)
     print(f"  - {constant_basis.name}")
     
-    # Generate test data
+    # 生成测试数据:真实函数是中心在 0.5 的窄高斯峰,与三个高斯基的形状匹配
     x = np.linspace(0, 1, 100)
-    y_true = np.exp(-(x - 0.5)**2 / 0.1)  # Gaussian centered at 0.5
-    y = y_true + 0.05 * np.random.randn(len(x))  # add a small amount of noise
+    y_true = np.exp(-(x - 0.5)**2 / 0.1)  # 真实函数:中心在 0.5 的高斯峰
+    y = y_true + 0.05 * np.random.randn(len(x))  # 叠加少量噪声(标准差 0.05)
     
     data = MultiDimData({0: x})
     
-    # Discrete inner product
+    # 构造离散内积
     inner_product = InnerProduct(is_continuous=False)
     
-    # Create a solver
+    # 创建求解器并装配
     solver = FunctionalSolver()
     solver.set_basis(basis_set)
     solver.set_inner_product(inner_product)
     solver.load_data(data, y)
     
-    # Solve
+    # 求解组合系数
     print("\nSolving...")
     coefficients = solver.solve()
     print(f"Coefficients: {coefficients}")
     
-    # Predict
+    # 预测
     y_pred = solver.predict(data)
     
-    # Compute the error
+    # 计算均方误差
     mse = np.mean((y_pred - y)**2)
     print(f"Mean squared error (MSE): {mse:.6f}")
     
-    # Visualization
+    # 可视化
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. Data fit
+    # 1. 数据拟合对比
     ax1 = axes[0, 0]
     ax1.scatter(x, y, alpha=0.5, label='Data', s=10)
     ax1.plot(x, y_true, 'g-', linewidth=2, label='True function')
@@ -447,7 +447,7 @@ def demo_custom_basis():
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. Basis functions
+    # 2. 基函数形状:展示所有自定义基函数(三个高斯 + 线性 + 常数)
     ax2 = axes[0, 1]
     x_plot = np.linspace(0, 1, 200)
     for i, basis in enumerate(basis_set.bases):
@@ -461,7 +461,7 @@ def demo_custom_basis():
     ax2.legend(fontsize=8)
     ax2.grid(True, alpha=0.3)
     
-    # 3. Coefficients
+    # 3. 系数柱状图:观察每个自定义基函数被赋予的权重
     ax3 = axes[1, 0]
     indices = np.arange(len(coefficients))
     basis_names = [basis.name for basis in basis_set.bases]
@@ -473,7 +473,7 @@ def demo_custom_basis():
     ax3.set_xticklabels(basis_names, rotation=45, ha='right', fontsize=8)
     ax3.grid(True, alpha=0.3, axis='y')
     
-    # 4. Basis function contributions
+    # 4. 各基函数贡献:绘制每一项 cᵢ·φᵢ(x) 的虚线,以及它们的和(总拟合)
     ax4 = axes[1, 1]
     x_plot = np.linspace(0, 1, 200)
     y_total = np.zeros_like(x_plot)
@@ -503,26 +503,26 @@ if __name__ == "__main__":
     print("1D Basis Function Demo")
     print("=" * 60)
     
-    # Run all demos
+    # 依次运行全部四个演示,并把每个方法的 MSE 记录到字典中,便于最后对比
     results = {}
     
-    # 1. Polynomial basis
+    # 1. 多项式基演示
     coeff_poly, mse_poly = demo_polynomial_basis()
     results['Polynomial'] = mse_poly
     
-    # 2. Fourier basis
+    # 2. 傅里叶基演示
     coeff_fourier, mse_fourier = demo_fourier_basis()
     results['Fourier'] = mse_fourier
     
-    # 3. Legendre polynomials
+    # 3. 勒让德多项式演示
     coeff_legendre, mse_legendre = demo_legendre_basis()
     results['Legendre'] = mse_legendre
     
-    # 4. Custom basis
+    # 4. 自定义基演示
     coeff_custom, mse_custom = demo_custom_basis()
     results['Custom'] = mse_custom
     
-    # Print comparison of results
+    # 打印各基函数方法的 MSE 对比表
     print("\n" + "=" * 60)
     print("Results comparison")
     print("=" * 60)

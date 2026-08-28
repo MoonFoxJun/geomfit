@@ -26,7 +26,11 @@ class WaveletBasis:
             Single-factor Mexican-hat wavelet basis.
         """
         def func(x, center, scale):
+            # 归一化坐标变换：t = (x − center)/scale（center 平移、scale 伸缩）
             t = (x - center) / scale
+            # 墨西哥帽（Ricker）小波：(1 − t²)exp(−t²/2) 是高斯函数 −exp(−t²/2)
+            # 关于 t 的二阶导数（差一个符号），波形中间高两边低像一顶帽子；
+            # 整体积分为 0，满足小波容许条件，适合检测信号的局部突变/峰值
             return (1 - t ** 2) * np.exp(-t ** 2 / 2)
         
         return BasisInfo(
@@ -58,6 +62,9 @@ class WaveletBasis:
         """
         def func(x, scale, translation, omega0):
             t = (x - translation) / scale
+            # Morlet 小波：余弦载波 cos(ω₀t) 乘高斯包络 exp(−t²/2)；
+            # ω₀（默认 5.0）是载波的中心角频率，高斯包络使波形在时域上快速衰减，
+            # 从而同时具备时域与频域的局部化能力（时频分析常用）
             return np.cos(omega0 * t) * np.exp(-t ** 2 / 2)
         
         return BasisInfo(
@@ -88,6 +95,9 @@ class WaveletBasis:
         """
         def func(x, scale, translation):
             t = (x - translation) / scale
+            # Haar 小波：最简单的分段常数小波，仅在 t ∈ [0, 1) 上非零：
+            # 前半段取 +1、后半段取 −1，其余为 0；积分为 0（满足容许条件），
+            # 相当于一阶差分的连续版本，可用来检测跳跃/阶跃
             if 0 <= t < 0.5:
                 return 1.0
             elif 0.5 <= t < 1.0:
@@ -127,6 +137,8 @@ class WaveletBasis:
         """
         bases = []
         
+        # 双重循环遍历所有 (scale, translation) 组合，为每个组合生成一个小波基：
+        # 这就是小波分析中"伸缩（尺度）+ 平移"的字典式构造，覆盖不同的频率与位置
         for scale in scales:
             for translation in translations:
                 if wavelet_type == "mexican_hat":

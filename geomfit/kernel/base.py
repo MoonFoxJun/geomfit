@@ -48,6 +48,8 @@ class Kernel(ABC):
         n_points = data.n_points
         K = np.zeros((n_points, n_points))
 
+        # 核矩阵对称：K_ij = k(x_i, x_j) = k(x_j, x_i) = K_ji，
+        # 因此只需计算上三角（含对角线，j ≥ i），再镜像填充下三角，省一半核函数求值开销
         for i in range(n_points):
             x_i = data.get_point(i)
             for j in range(i, n_points):
@@ -55,7 +57,7 @@ class Kernel(ABC):
                 k_val = self(x_i, x_j)
                 K[i, j] = k_val
                 if i != j:
-                    K[j, i] = k_val  # symmetric
+                    K[j, i] = k_val  # 利用对称性 K_ji = K_ij，镜像填充下三角
 
         return K
 
@@ -80,6 +82,8 @@ class Kernel(ABC):
         n_points2 = data2.n_points
         K = np.zeros((n_points1, n_points2))
 
+        # 交叉核矩阵：K_ij = k(x_i, y_j)，对第一组每个点与第二组每个点两两求核。
+        # 注意交叉矩阵一般不对称（n_points1 ≠ n_points2 时甚至不是方阵），必须算满全部元素
         for i in range(n_points1):
             x_i = data1.get_point(i)
             for j in range(n_points2):

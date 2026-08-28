@@ -22,7 +22,8 @@ class CompositeKernel(Kernel):
         self.kernels = kernels
         self.operation = operation
 
-        # Validate the operation type
+        # 校验组合方式：只允许 "add"（加法）与 "multiply"（乘法）。
+        # 两者都是合法的核运算——正定核的逐点和与逐点乘积仍是正定核（Mercer 核的封闭性）
         valid_operations = ["add", "multiply"]
         if operation not in valid_operations:
             raise ValueError(f"operation must be one of {valid_operations}")
@@ -44,14 +45,14 @@ class CompositeKernel(Kernel):
             Composite kernel value.
         """
         if self.operation == "add":
-            # Sum of the individual kernels
+            # 加法组合：k(x, y) = Σᵢ kᵢ(x, y)，从 0 开始累加（加法单位元）
             result = 0.0
             for kernel in self.kernels:
                 result += kernel(x, y)
             return result
 
         elif self.operation == "multiply":
-            # Product of the individual kernels
+            # 乘法组合：k(x, y) = Πᵢ kᵢ(x, y)，从 1 开始连乘（乘法单位元）
             result = 1.0
             for kernel in self.kernels:
                 result *= kernel(x, y)
@@ -77,21 +78,22 @@ class CompositeKernel(Kernel):
             raise TypeError("data must be a MultiDimData instance")
 
         if self.operation == "add":
-            # Sum of the individual kernel matrices
+            # 加法组合：各核矩阵逐元素相加（等价于核函数求和后的整矩阵形式）
             K = np.zeros((data.n_points, data.n_points))
             for kernel in self.kernels:
                 K += kernel.compute_matrix(data)
             return K
 
         elif self.operation == "multiply":
-            # Element-wise product of the individual kernel matrices
+            # 乘法组合：各核矩阵逐元素相乘（Hadamard 乘积），对应核函数的逐点乘积
             K = None
             for kernel in self.kernels:
                 K_k = kernel.compute_matrix(data)
                 if K is None:
-                    K = K_k
+                    K = K_k  # 第一个核矩阵直接作为初值
                 else:
-                    K *= K_k
+                    K *= K_k  # 之后逐个与当前结果逐元素相乘
+            # 空组合（kernels 为空列表）时退化为全 1 矩阵，即核值恒为 1（乘法的单位元）
             return K if K is not None else np.ones((data.n_points, data.n_points))
 
     def add_kernel(self, kernel: Kernel):

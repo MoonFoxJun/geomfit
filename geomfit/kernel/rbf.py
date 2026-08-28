@@ -42,14 +42,16 @@ class RBFKernel(Kernel):
         if n < 2:
             return 1.0
 
-        # Pairwise squared Euclidean distances
+        # 向量化计算两两点的平方欧氏距离矩阵：
+        # ‖x_i - x_j‖² = ‖x_i‖² + ‖x_j‖² - 2 x_iᵀ x_j
+        # （第一项是每行模长平方构成的列向量，第二项是其转置，第三项是格拉姆矩阵 X Xᵀ）
         X_squared = np.sum(X ** 2, axis=1, keepdims=True)
         d2 = X_squared + X_squared.T - 2 * X @ X.T
-        np.fill_diagonal(d2, np.inf)
+        np.fill_diagonal(d2, np.inf)  # 对角元是自己到自己的距离 0，置为无穷大以便取最小值时排除
 
-        # Mean nearest-neighbor distance
+        # 平均最近邻距离：对每行（每个点）取最小值得到"到最近邻的距离"，再对所有点取平均
         nn = np.sqrt(np.maximum(d2, 0.0)).min(axis=1)
-        return float(1.5 * nn.mean())
+        return float(1.5 * nn.mean())  # 长度尺度取 1.5 倍平均最近邻距离：保证任何数据尺度下核矩阵条件数都合理
 
     def __call__(self, x: Dict[int, float], y: Dict[int, float]) -> float:
         """
@@ -68,13 +70,14 @@ class RBFKernel(Kernel):
             k(x, y) = σ² * exp(-||x - y||² / (2 * ℓ²)).
         """
         squared_distance = 0.0
-        dims = set(x.keys()) | set(y.keys())
+        dims = set(x.keys()) | set(y.keys())  # 取两点所有维度的并集：某维度只在一个点中出现时也要计入距离
 
         for dim in dims:
-            x_val = x.get(dim, 0.0)
+            x_val = x.get(dim, 0.0)  # 稀疏坐标表示约定：缺失维度按 0 处理
             y_val = y.get(dim, 0.0)
-            squared_distance += (x_val - y_val) ** 2
+            squared_distance += (x_val - y_val) ** 2  # 累加各维差的平方，得到 ‖x - y‖²
 
+        # RBF 核公式：k(x, y) = σ² · exp(-‖x - y‖² / (2ℓ²))，σ 控制输出幅度、ℓ 控制衰减快慢
         return self.sigma ** 2 * np.exp(-squared_distance / (2 * self._ls() ** 2))
 
     def compute_matrix(self, data: Any) -> np.ndarray:
@@ -99,16 +102,18 @@ class RBFKernel(Kernel):
 
         X = data.get_coordinate_matrix()
 
-        # Estimate the length scale from the data if not specified
+        # 若用户未显式给出长度尺度，则首次调用 compute_matrix 时从数据自动估计，并缓存结果供后续复用
         if self._effective_length_scale is None and self.length_scale is None:
             self._effective_length_scale = self._estimate_length_scale(X)
 
         ls = self._ls()
 
-        # Vectorized pairwise squared Euclidean distances
+        # 向量化两两距离矩阵：‖x_i - x_j‖² = ‖x_i‖² + ‖x_j‖² - 2 x_iᵀ x_j，
+        # 一次矩阵运算算出全部点对的距离（避免 Python 双层循环）
         X_squared = np.sum(X ** 2, axis=1, keepdims=True)
         distances = X_squared + X_squared.T - 2 * X @ X.T
 
+        # 对整个距离矩阵套用高斯公式：K_ij = σ² · exp(-‖x_i - x_j‖²/(2ℓ²))，对角元恰为 σ²
         K = self.sigma ** 2 * np.exp(-distances / (2 * ls ** 2))
 
         return K

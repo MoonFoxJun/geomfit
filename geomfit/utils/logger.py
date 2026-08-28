@@ -34,24 +34,26 @@ class Logger:
         
         self.logger = logging.getLogger(name)
         self.logger.setLevel(self.log_level)
-        self.logger.handlers = []  # Drop pre-existing handlers to avoid duplicate output
+        # 清空预先存在的 handler，避免重复输出（比如多次实例化 Logger
+        # 时，同一 logger 名下会堆积多个输出流）。
+        self.logger.handlers = []
         
-        # Shared formatter
+        # 共享的格式化器：统一时间戳/名称/级别/消息的排版
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         
-        # Console handler
+        # 控制台输出 handler：把日志写到 stdout
         if console_output:
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(self.log_level)
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
         
-        # File handler
+        # 文件输出 handler：把日志同时写入文件
         if log_file:
-            # Create the parent directory if missing
+            # 若日志文件所在的目录还不存在，先递归创建
             log_path = Path(log_file)
             log_path.parent.mkdir(parents=True, exist_ok=True)
             
@@ -153,8 +155,9 @@ class Logger:
         list
             List of log messages.
         """
-        # Requires a memory handler to be installed beforehand;
-        # currently returns an empty list.
+        # 要返回已记录的日志消息，需要预先安装一个"内存 handler"
+        # （如 logging.handlers.MemoryHandler）把消息存到内存；
+        # 当前实现尚未安装，因此直接返回空列表。
         return []
     
     @staticmethod

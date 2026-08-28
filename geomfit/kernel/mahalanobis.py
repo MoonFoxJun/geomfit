@@ -57,28 +57,31 @@ class MahalanobisKernel(Kernel):
         self.alpha = alpha
         self._effective_metric = None
 
-    # ---------- metric ----------
+    # ---------- 度量矩阵 ----------
 
     def _estimate_metric(self, X: np.ndarray) -> np.ndarray:
         """Estimate the regularized precision matrix M = (Σ + αI)⁻¹ from data."""
         n, d = X.shape
         if n < 2:
             return np.eye(d)
-        Xc = X - X.mean(axis=0)
-        cov = (Xc.T @ Xc) / (n - 1)
-        eigval, eigvec = np.linalg.eigh(cov)
-        reg = np.maximum(eigval, self.alpha)          # suppress near-zero-variance directions
-        return (eigvec / reg) @ eigvec.T              # V diag(1/reg) Vᵀ
+        Xc = X - X.mean(axis=0)               # 数据中心化：减去各维均值，使协方差围绕原点计算
+        cov = (Xc.T @ Xc) / (n - 1)           # 样本协方差矩阵 Σ（除以 n-1 得到无偏估计）
+        eigval, eigvec = np.linalg.eigh(cov)  # 对称矩阵用 eigh 做特征分解：Σ = V diag(λ) Vᵀ
+        reg = np.maximum(eigval, self.alpha)  # 正则化：把近零方差方向（极小特征值）垫高到 α，防止求逆时数值爆炸
+        return (eigvec / reg) @ eigvec.T      # 构造正则化精度矩阵 M = V diag(1/reg) Vᵀ = (Σ + αI)⁻¹，
+                                              # 这正是 PCA 白化变换：沿主成分方向拉伸、沿噪声方向压缩
 
     def _get_metric(self, data: Any) -> np.ndarray:
+        # 优先使用用户显式传入的度量矩阵 M（转成 float 数组并返回）
         if self.metric is not None:
             return np.asarray(self.metric, dtype=float)
+        # 否则从训练数据自动估计；只估计一次并缓存，保证后续求值使用同一度量（前后一致性）
         if self._effective_metric is None:
             X = data.get_coordinate_matrix()
             self._effective_metric = self._estimate_metric(X)
         return self._effective_metric
 
-    # ---------- evaluation ----------
+    # ---------- 核函数求值 ----------
 
     def __call__(self, x: Dict[int, float], y: Dict[int, float]) -> float:
         """
@@ -91,16 +94,17 @@ class MahalanobisKernel(Kernel):
             else (np.asarray(self.metric, dtype=float) if self.metric is not None else None)
 
         if M is None:
-            # No data context available: fall back to the Euclidean RBF
+            # 没有数据上下文（直接调用 kernel(x, y) 而从未经过 compute_matrix）：
+            # 无法估计度量，退化为欧氏 RBF，即马氏度量 M = I 的特例
             d2 = 0.0
             for dim in set(x.keys()) | set(y.keys()):
                 d2 += (x.get(dim, 0.0) - y.get(dim, 0.0)) ** 2
             return self.sigma ** 2 * np.exp(-0.5 * d2)
 
-        d = M.shape[0]
-        diff = np.array([x.get(i, 0.0) - y.get(i, 0.0) for i in range(d)])
-        d2 = float(diff @ M @ diff)
-        return self.sigma ** 2 * np.exp(-0.5 * d2)
+        d = M.shape[0]  # 度量矩阵维数（约定坐标维度为连续的 0..d-1，PCA 旋转后的坐标满足此要求）
+        diff = np.array([x.get(i, 0.0) - y.get(i, 0.0) for i in range(d)])  # 差值向量 x - y
+        d2 = float(diff @ M @ diff)  # 马氏距离平方 d² = (x - y)ᵀ M (x - y)
+        return self.sigma ** 2 * np.exp(-0.5 * d2)  # k(x, y) = σ² · exp(-½ d²)
 
     def compute_matrix(self, data: Any) -> np.ndarray:
         """
@@ -116,8 +120,10 @@ class MahalanobisKernel(Kernel):
         X = data.get_coordinate_matrix()
         M = self._get_metric(data)
 
-        XM = X @ M
-        quad = np.sum(XM * X, axis=1)                 # diag(X M Xᵀ)
-        d2 = quad[:, None] + quad[None, :] - 2.0 * (XM @ X.T)
-        d2 = np.maximum(d2, 0.0)                      # remove floating-point error
-        return self.sigma ** 2 * np.exp(-0.5 * d2)
+        # 向量化计算所有点对的马氏距离平方，利用恒等式：
+        # d²_ij = (x_i - x_j)ᵀM(x_i - x_j) = x_iᵀMx_i + x_jᵀMx_j - 2 x_iᵀMx_j
+        XM = X @ M                             # 先算 XM = X·M，供二次项与交叉项复用
+        quad = np.sum(XM * X, axis=1)          # 对角元 quad_i = x_iᵀMx_i（即 diag(X M Xᵀ)）
+        d2 = quad[:, None] + quad[None, :] - 2.0 * (XM @ X.T)  # 广播成矩阵：quad_i + quad_j - 2x_iᵀMx_j
+        d2 = np.maximum(d2, 0.0)               # 浮点舍入可能产生微小负值，截断到 0（保证后续指数运算有意义）
+        return self.sigma ** 2 * np.exp(-0.5 * d2)  # k(x, y) = σ² · exp(-½ d²)

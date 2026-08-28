@@ -47,11 +47,12 @@ class PolynomialKernel(Kernel):
             k(x, y) = (γ * ⟨x, y⟩ + c)^degree.
         """
         dot_product = 0.0
-        dims = set(x.keys()) & set(y.keys())  # only dimensions shared by both points
+        dims = set(x.keys()) & set(y.keys())  # 多项式核只依赖内积 ⟨x,y⟩：注意这里取交集，只在两点都有的维度上累加 x_i·y_i
 
         for dim in dims:
             dot_product += x[dim] * y[dim]
 
+        # 多项式核公式：k(x, y) = (γ·⟨x, y⟩ + c)^degree，γ 为缩放系数、c 为独立项（截距）
         return (self.gamma * dot_product + self.coef0) ** self.degree
 
     def compute_matrix(self, data: Any) -> np.ndarray:
@@ -76,9 +77,10 @@ class PolynomialKernel(Kernel):
 
         X = data.get_coordinate_matrix()
 
-        # Matrix of pairwise inner products
+        # 一次矩阵乘法得到全部点对的内积：K_ij = x_iᵀ x_j（即数据矩阵的格拉姆矩阵 X Xᵀ）
         K = X @ X.T
 
+        # 逐元素套用多项式核：K_ij = (γ·⟨x_i, x_j⟩ + c)^degree
         K = (self.gamma * K + self.coef0) ** self.degree
 
         return K

@@ -78,15 +78,19 @@ def _is_constant(basis: BasisInfo, rtol: float = 1e-12) -> bool:
     """
     dim = basis.dims[0]
     try:
+        # 在三个探针点 (0.0, 1.0, 0.5) 上求值：若函数是常数，这三处取值应几乎相同。
+        # 用"相对变化量"判断比绝对阈值更稳健（不受函数本身量级影响）
         vals = np.asarray(
             [basis.evaluate({dim: p}) for p in (0.0, 1.0, 0.5)],
             dtype=float,
         )
     except Exception:
+        # 求值失败（例如基在探针点处无定义）时保守地判为"不是常数"
         return False
     scale = float(np.max(np.abs(vals)))
     if scale == 0.0:
-        return True  # a basis that is zero everywhere is also treated as constant
+        return True  # 处处为 0 的基同样视为常数（它也会产生重复的常数列）
+    # 相对变化判据：各点取值与第一点的最大偏差 ≤ rtol × |最大值|，即认为是常数函数
     return bool(np.max(np.abs(vals - vals[0])) <= rtol * scale)
 
 
@@ -121,13 +125,20 @@ class AdditiveBasis:
         basis_set = BasisSet()
         seen_constant = False
 
+        # 直和（additive）模型：f(x₁, …, x_d) = Σ_d Σ_j c_{d,j} φ_{d,j}(x_d)，
+        # 各维基函数直接相加、没有 x·y 之类的交叉项。它对应张量积空间中的一个
+        # 低维子空间：在张量积展开里只保留"其余维度取常数基"的项即退化为此模型，
+        # 因此 直和 ⊂ 张量积，表达能力更弱，但基数量随维度线性增长（无维数灾难）
         for dim in sorted(dim_bases.keys()):
             for basis in dim_bases[dim]:
                 if deduplicate_constants and _is_constant(basis):
+                    # 常数基去重：若每个维度都提供常数基（x⁰, y⁰, …），直和中会出现
+                    # 多列全 1 的重复列，Gram 矩阵 ΦᵀΦ 必然奇异、法方程无法求解，
+                    # 所以只保留第一个常数基（它已代表所有维度的公共常数分量）
                     if not seen_constant:
                         seen_constant = True
                         basis_set.add_basis(basis)
-                    # a constant basis was already added; skip subsequent duplicates
+                    # 已经加入过常数基了，跳过后续维度的重复常数基
                 else:
                     basis_set.add_basis(basis)
 

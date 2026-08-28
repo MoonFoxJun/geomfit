@@ -17,17 +17,18 @@ def test_additive_constant_dedup():
     x_bases = [BasisFactory.polynomial(dim=0, order=o) for o in range(3)]
     y_bases = [BasisFactory.polynomial(dim=1, order=o) for o in range(3)]
 
-    # Without deduplication: 3 + 3 = 6 bases (including two constant bases 1)
+    # 不去重：3 + 3 = 6 个基（其中包含两个相同的常数基 1，分别来自 x 维和 y 维）
     raw = AdditiveBasis.build({0: x_bases, 1: y_bases}, deduplicate_constants=False)
     assert len(raw) == 6
 
-    # With deduplication: a single constant remains → 5 bases
+    # 去重后：两个常数基合并为一个，共 6 - 1 = 5 个基
     bs = AdditiveBasis.build({0: x_bases, 1: y_bases})
     assert len(bs) == 5
 
-    # The design matrix should contain exactly one all-ones column
+    # 设计矩阵中应恰好只有一列全为 1（常数基只保留一个）
     data = MultiDimData({0: np.linspace(0, 1, 10), 1: np.linspace(0, 1, 10)})
     Phi = bs.evaluate_all(data)
+    # 逐列判断是否所有元素都 ≈ 1（容差 1e-12），统计这样的"全 1 列"的数量
     ones_cols = int(np.sum(np.all(np.abs(Phi - 1.0) < 1e-12, axis=0)))
     assert ones_cols == 1
 
@@ -41,6 +42,7 @@ def test_additive_fits_additive_function():
     z = z_true + 0.01 * rng.standard_normal(40)
     data = MultiDimData({0: x, 1: y})
 
+    # 直和构造：每个维度取 0、1 阶多项式，去重后为 {1, x, y}
     bs = AdditiveBasis.build({
         0: [BasisFactory.polynomial(dim=0, order=o) for o in range(2)],
         1: [BasisFactory.polynomial(dim=1, order=o) for o in range(2)],
@@ -51,11 +53,13 @@ def test_additive_fits_additive_function():
     solver.load_data(data, z)
     solver.solve()
 
+    # 目标函数 1 + 2x - y 是纯加法形式（无交叉项），直和基可以精确表示，拟合误差应≈噪声水平（0.01² 量级）
     mse = np.mean((solver.predict(data) - z_true) ** 2)
     assert mse < 1e-3
 
 
 if __name__ == "__main__":
+    # 直接运行本脚本时，顺序执行全部测试用例并打印通过信息
     test_additive_constant_dedup()
     print("✓ test_additive_constant_dedup passed")
     test_additive_fits_additive_function()

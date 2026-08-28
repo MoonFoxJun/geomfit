@@ -21,7 +21,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')  # print Unicode math on any console (e.g. GBK Windows)
+    sys.stdout.reconfigure(encoding='utf-8')  # 把标准输出重设为 UTF-8 编码,确保数学符号(如 √、α)能在任何控制台正常打印(例如 Windows 的 GBK 代码页)
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -59,15 +59,15 @@ def fit_kernel(kernel, data, z):
 
 
 def main():
-    rng = np.random.default_rng(2024)
+    rng = np.random.default_rng(2024)   # 固定随机种子,保证结果可复现
 
-    # ---------------- data: narrow band y ≈ x, true function depends only on principal axis u ----------------
+    # ---------------- 数据:窄带 y ≈ x,真函数只依赖主轴 u ----------------
     n = 80
     x = rng.uniform(0.1, 0.9, n)
-    v = rng.normal(0.0, 0.02, n)          # small perturbation in the perpendicular direction -> strong correlation
+    v = rng.normal(0.0, 0.02, n)          # 垂直方向的小扰动(标准差 0.02)使得 y ≈ x,两个维度强相关
     y = x + v
-    u = (x + y) / np.sqrt(2.0)            # principal axis
-    z_true = np.sin(np.pi * (x + y))      # = sin(√2 π u), depends only on u
+    u = (x + y) / np.sqrt(2.0)            # 主轴(第一主成分方向):u = (x+y)/√2
+    z_true = np.sin(np.pi * (x + y))      # 真函数 = sin(π(x+y)) = sin(√2π·u),只依赖主轴 u
     z = z_true + 0.02 * rng.standard_normal(n)
     data = MultiDimData({0: x, 1: y})
 
@@ -76,42 +76,45 @@ def main():
     print(f"corr(x, y) = {np.corrcoef(x, y)[0, 1]:.4f}")
     print("=" * 66)
 
-    # ---------------- method 1: tensor-product Fourier in raw coordinates (frequencies 0..2, L=1) ----------------
+    # ---------------- 方法 1:原始坐标下的张量积傅里叶基(频率 0..2, L=1) ----------------
     xb = []
     for f in range(3):
-        xb.extend(BasisFactory.fourier(dim=0, freq=f, L=1.0))
+        xb.extend(BasisFactory.fourier(dim=0, freq=f, L=1.0))   # x 方向:常数 + 频率 1、2 的正余弦(共 5 个一维基)
     yb = []
     for f in range(3):
-        yb.extend(BasisFactory.fourier(dim=1, freq=f, L=1.0))
+        yb.extend(BasisFactory.fourier(dim=1, freq=f, L=1.0))   # y 方向同理
     raw_set = BasisSet()
     for b in BasisFactory.tensor_product({0: xb, 1: yb}):
         raw_set.add_basis(b)
+    # 在原始(未旋转)坐标上做张量积拟合;同时记录 Gram 矩阵条件数与系数范数
     s_raw, cond_raw, norm_raw = fit_tensor(raw_set, data, z)
-    mse_raw = np.mean((s_raw.predict(data) - z_true) ** 2)
+    mse_raw = np.mean((s_raw.predict(data) - z_true) ** 2)      # 拟合 MSE:用拟合值对比无噪声的真函数 z_true
 
-    # ---------------- method 2: tensor product after PCA rotation (drop the near-zero-variance direction) ----------------
-    rotated, info = pca_rotate(data, n_components=1)
-    r0 = info['explained_variance_ratio'][0]
-    r1 = info['explained_variance_ratio'][1]
+    # ---------------- 方法 2:PCA 旋转后的张量积(丢弃方差近似为 0 的次轴方向) ----------------
+    rotated, info = pca_rotate(data, n_components=1)            # PCA 旋转:只保留 1 个主成分,丢弃方差几乎为 0 的次轴
+    r0 = info['explained_variance_ratio'][0]                    # 主轴(第一主成分)的方差占比
+    r1 = info['explained_variance_ratio'][1]                    # 次轴(第二主成分)的方差占比(≈ 噪声,可安全丢弃)
     pca_set = BasisSet()
     for f in range(3):
+        # 旋转后只需在主轴方向上构造一维傅里叶基;周期 L=√2 对应主轴 u 的定义域长度
         for b in BasisFactory.fourier(dim=0, freq=f, L=np.sqrt(2.0)):
             pca_set.add_basis(b)
+    # 在旋转后的坐标上做张量积拟合
     s_pca, cond_pca, norm_pca = fit_tensor(pca_set, rotated, z)
-    mse_pca = np.mean((s_pca.predict(rotated) - z_true) ** 2)
+    mse_pca = np.mean((s_pca.predict(rotated) - z_true) ** 2)   # 预测值在旋转坐标上,但真函数只依赖 u,可直接比较
 
-    # ---------------- method 3: Mahalanobis kernel (raw coordinates; kernel method needs ridge regularization) ----------------
-    kernel = MahalanobisKernel(sigma=1.0)
+    # ---------------- 方法 3:马氏距离核(直接在原始坐标上;核方法需要岭正则化) ----------------
+    kernel = MahalanobisKernel(sigma=1.0)                       # 马氏核:把数据相关性吸收进距离度量,使核矩阵良态
     s_ker, cond_ker, norm_ker = fit_kernel(kernel, data, z)
-    # Gaussian kernel matrices have fast-decaying spectra and are naturally
-    # ill-conditioned; ridge regularization (K + αI) is standard practice
+    # 高斯核矩阵的特征值谱衰减极快,天然病态(条件数极大);
+    # 标准做法是加岭正则化:求解 (K + αI)α = y
     s_ker_reg = FunctionalSolver()
     s_ker_reg.set_kernel(kernel)
     s_ker_reg.load_data(data, z)
-    s_ker_reg.solve(regularization={"alpha": 1e-6})
+    s_ker_reg.solve(regularization={"alpha": 1e-6})             # 用岭正则化(α=1e-6)重新拟合
     mse_ker = np.mean((s_ker_reg.predict(data) - z_true) ** 2)
 
-    # ---------------- results table ----------------
+    # ---------------- 结果汇总表 ----------------
     print(f"\n{'Method':<30}{'Cond':>14}{'|coeff|':>14}{'Fit MSE':>14}")
     print("-" * 72)
     print(f"{'Raw tensor product (Fourier ≤ 2)':<30}{cond_raw:>14.3e}{norm_raw:>14.3e}{mse_raw:>14.6f}")
@@ -129,19 +132,19 @@ def main():
     print("    ill-conditioned (cond ≈ 1e16), so ridge regularization (K + αI) is required;")
     print("    with the ridge, the interpolation is smooth and the error is at noise level.")
 
-    # ---------------- visualization ----------------
-    gx, gy = np.meshgrid(np.linspace(0, 1, 50), np.linspace(0, 1, 50))
+    # ---------------- 可视化 ----------------
+    gx, gy = np.meshgrid(np.linspace(0, 1, 50), np.linspace(0, 1, 50))    # 构造 50×50 的规则网格,覆盖整个 [0,1]² 区域
     grid_data = MultiDimData({0: gx.ravel(), 1: gy.ravel()})
-    grid_data_rot = pca_transform(grid_data, info)
+    grid_data_rot = pca_transform(grid_data, info)                         # 网格同样做 PCA 变换,坐标才能与方法 2 的训练数据对齐
 
-    z_raw = s_raw.predict(grid_data).reshape(gx.shape)
-    z_pca = s_pca.predict(grid_data_rot).reshape(gx.shape)
-    z_ker = s_ker_reg.predict(grid_data).reshape(gx.shape)
+    z_raw = s_raw.predict(grid_data).reshape(gx.shape)                     # 方法 1:原始坐标预测
+    z_pca = s_pca.predict(grid_data_rot).reshape(gx.shape)                 # 方法 2:旋转坐标预测
+    z_ker = s_ker_reg.predict(grid_data).reshape(gx.shape)                 # 方法 3:原始坐标预测(马氏核 + 岭正则化)
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 11))
 
     ax = axes[0, 0]
-    ax.scatter(x, y, c=z, cmap='viridis', s=20)
+    ax.scatter(x, y, c=z, cmap='viridis', s=20)                     # 原始数据散点:颜色表示目标值,可见数据集中在 y≈x 的窄带内
     ax.plot([0, 1], [0, 1], 'r--', alpha=0.5, label='y = x (band center)')
     ax.set_xlabel('x'); ax.set_ylabel('y')
     ax.set_title('Data (narrow band y ≈ x, color = target)')
