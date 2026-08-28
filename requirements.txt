@@ -1,0 +1,5 @@
+numpy>=1.21.0
+scipy>=1.7.0
+matplotlib>=3.4.0  # for visualization
+pyyaml>=5.4.0      # for config files
+pytest>=6.2.0      # for testing

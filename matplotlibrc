@@ -1,0 +1,7 @@
+# 项目级 matplotlib 配置
+# 作用：让图里的中文标题/标签正常显示（默认 DejaVu Sans 不含中文字形）
+# 生效条件：在项目根目录下运行 python（matplotlib 会自动读取当前目录的 matplotlibrc）
+
+font.family: sans-serif
+font.sans-serif: Microsoft YaHei, SimHei, SimSun, DengXian, Arial
+axes.unicode_minus: False
