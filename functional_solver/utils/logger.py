@@ -1,4 +1,4 @@
-"""函数求解器的日志工具。"""
+"""Logging utilities for the functional solver."""
 
 import logging
 import sys
@@ -7,52 +7,51 @@ from datetime import datetime
 from pathlib import Path
 
 class Logger:
-    """函数求解器的日志工具类。"""
+    """Logging utility for the functional solver."""
     
     def __init__(self, name: str = "functional_solver", 
                  log_level: str = "INFO",
                  log_file: Optional[str] = None,
                  console_output: bool = True):
         """
-        初始化日志器。
+        Initialize the logger.
         
-        参数
+        Parameters
         ----------
-        name : str, 默认="functional_solver"
-            日志器名称
-        log_level : str, 默认="INFO"
-            日志级别：DEBUG、INFO、WARNING、ERROR、CRITICAL
-        log_file : str, 可选
-            日志文件路径
-        console_output : bool, 默认=True
-            是否输出到控制台
+        name : str, default="functional_solver"
+            Logger name.
+        log_level : str, default="INFO"
+            Log level: DEBUG, INFO, WARNING, ERROR, or CRITICAL.
+        log_file : str, optional
+            Path of the log file.
+        console_output : bool, default=True
+            Whether to write messages to the console.
         """
         self.name = name
         self.log_level = getattr(logging, log_level.upper())
         self.log_file = log_file
         self.console_output = console_output
         
-        # 创建日志器
         self.logger = logging.getLogger(name)
         self.logger.setLevel(self.log_level)
-        self.logger.handlers = []  # 移除已有的处理器
+        self.logger.handlers = []  # Drop pre-existing handlers to avoid duplicate output
         
-        # 创建格式化器
+        # Shared formatter
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         
-        # 添加控制台处理器
+        # Console handler
         if console_output:
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(self.log_level)
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
         
-        # 添加文件处理器
+        # File handler
         if log_file:
-            # 如果目录不存在则创建
+            # Create the parent directory if missing
             log_path = Path(log_file)
             log_path.parent.mkdir(parents=True, exist_ok=True)
             
@@ -62,39 +61,39 @@ class Logger:
             self.logger.addHandler(file_handler)
     
     def debug(self, message: str, **kwargs):
-        """记录调试消息。"""
+        """Log a debug message."""
         self.logger.debug(self._format_message(message, **kwargs))
     
     def info(self, message: str, **kwargs):
-        """记录信息消息。"""
+        """Log an info message."""
         self.logger.info(self._format_message(message, **kwargs))
     
     def warning(self, message: str, **kwargs):
-        """记录警告消息。"""
+        """Log a warning message."""
         self.logger.warning(self._format_message(message, **kwargs))
     
     def error(self, message: str, **kwargs):
-        """记录错误消息。"""
+        """Log an error message."""
         self.logger.error(self._format_message(message, **kwargs))
     
     def critical(self, message: str, **kwargs):
-        """记录严重错误消息。"""
+        """Log a critical message."""
         self.logger.critical(self._format_message(message, **kwargs))
     
     def _format_message(self, message: str, **kwargs) -> str:
-        """使用附加上下文格式化消息。"""
+        """Format the message with extra context appended as key=value pairs."""
         if kwargs:
             context_str = " ".join(f"{k}={v}" for k, v in kwargs.items())
             return f"{message} [{context_str}]"
         return message
     
     def log_solver_start(self, solver_name: str, **kwargs):
-        """记录求解器开始。"""
+        """Log the start of a solver run."""
         self.info(f"Starting {solver_name}", **kwargs)
     
     def log_solver_end(self, solver_name: str, success: bool = True, 
                       duration: Optional[float] = None, **kwargs):
-        """记录求解器结束。"""
+        """Log the end of a solver run."""
         status = "completed successfully" if success else "failed"
         message = f"{solver_name} {status}"
         
@@ -107,19 +106,19 @@ class Logger:
             self.error(message, **kwargs)
     
     def log_data_loading(self, data_info: Dict[str, Any]):
-        """记录数据加载信息。"""
+        """Log data-loading information."""
         n_points = data_info.get('n_points', 'unknown')
         n_dims = data_info.get('n_dims', 'unknown')
         self.info(f"Loaded data: {n_points} points, {n_dims} dimensions", **data_info)
     
     def log_basis_info(self, basis_info: Dict[str, Any]):
-        """记录基函数信息。"""
+        """Log basis-function information."""
         n_basis = basis_info.get('n_basis', 'unknown')
         basis_types = basis_info.get('basis_types', [])
         self.info(f"Using {n_basis} basis functions: {basis_types}", **basis_info)
     
     def log_solution_info(self, solution_info: Dict[str, Any]):
-        """记录求解信息。"""
+        """Log solution information."""
         n_coeff = solution_info.get('n_coefficients', 'unknown')
         residual_norm = solution_info.get('residual_norm', 'unknown')
         condition_number = solution_info.get('condition_number', 'unknown')
@@ -128,7 +127,7 @@ class Logger:
                  f"condition number: {condition_number:.2e}", **solution_info)
     
     def log_prediction_info(self, prediction_info: Dict[str, Any]):
-        """记录预测信息。"""
+        """Log prediction information."""
         n_points = prediction_info.get('n_points', 'unknown')
         mse = prediction_info.get('mse', 'unknown')
         r2 = prediction_info.get('r2', 'unknown')
@@ -136,42 +135,42 @@ class Logger:
         self.info(f"Prediction: {n_points} points, MSE: {mse:.2e}, R²: {r2:.4f}", **prediction_info)
     
     def log_exception(self, exception: Exception, context: str = ""):
-        """记录带上下文的异常。"""
+        """Log an exception with context."""
         self.error(f"Exception in {context}: {str(exception)}", 
                   exception_type=type(exception).__name__)
     
     def get_log_messages(self, level: Optional[str] = None) -> list:
         """
-        获取已记录的消息（如果使用了内存处理器）。
+        Return the recorded messages (requires a memory handler).
         
-        参数
+        Parameters
         ----------
-        level : str, 可选
-            按日志级别过滤
+        level : str, optional
+            Filter messages by log level.
             
-        返回
+        Returns
         -------
         list
-            日志消息列表
+            List of log messages.
         """
-        # 这需要预先设置一个内存处理器
-        # 目前先返回空列表
+        # Requires a memory handler to be installed beforehand;
+        # currently returns an empty list.
         return []
     
     @staticmethod
     def create_default_logger(log_file: Optional[str] = None) -> 'Logger':
         """
-        创建默认日志器。
+        Create a default logger.
         
-        参数
+        Parameters
         ----------
-        log_file : str, 可选
-            日志文件路径
+        log_file : str, optional
+            Path of the log file.
             
-        返回
+        Returns
         -------
         Logger
-            默认日志器实例
+            Default logger instance.
         """
         return Logger(
             name="functional_solver",
@@ -183,17 +182,17 @@ class Logger:
     @staticmethod
     def create_debug_logger(log_file: Optional[str] = None) -> 'Logger':
         """
-        创建调试日志器。
+        Create a debug logger.
         
-        参数
+        Parameters
         ----------
-        log_file : str, 可选
-            日志文件路径
+        log_file : str, optional
+            Path of the log file.
             
-        返回
+        Returns
         -------
         Logger
-            调试日志器实例
+            Debug logger instance.
         """
         return Logger(
             name="functional_solver_debug",
@@ -205,12 +204,12 @@ class Logger:
     @staticmethod
     def create_quiet_logger() -> 'Logger':
         """
-        创建安静模式日志器（仅写入文件）。
+        Create a quiet logger that writes to a file only.
         
-        返回
+        Returns
         -------
         Logger
-            安静模式日志器实例
+            Quiet logger instance.
         """
         return Logger(
             name="functional_solver_quiet",

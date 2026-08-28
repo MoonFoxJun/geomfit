@@ -1,4 +1,4 @@
-"""函数求解器的可视化工具。"""
+"""Visualization utilities for the functional solver."""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,48 +8,48 @@ from typing import Optional, Tuple, List, Dict, Any
 from ..core.data_container import MultiDimData
 
 class Visualization:
-    """函数求解器的可视化工具类。"""
+    """Plotting utilities for fits, basis functions, and surfaces."""
     
     @staticmethod
     def plot_1d_fit(x: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray, 
                    title: str = "1D Function Fit", xlabel: str = "x", 
                    ylabel: str = "y", figsize: Tuple[int, int] = (10, 6)) -> Figure:
         """
-        绘制一维函数拟合图。
+        Plot a 1-D function fit.
         
-        参数
+        Parameters
         ----------
         x : np.ndarray
-            x 值
+            x values.
         y_true : np.ndarray
-            真实的 y 值
+            True y values.
         y_pred : np.ndarray
-            预测的 y 值
-        title : str, 默认="1D Function Fit"
-            图标题
-        xlabel : str, 默认="x"
-            x 轴标签
-        ylabel : str, 默认="y"
-            y 轴标签
-        figsize : Tuple[int, int], 默认=(10, 6)
-            图像大小
+            Predicted y values.
+        title : str, default="1D Function Fit"
+            Plot title.
+        xlabel : str, default="x"
+            x-axis label.
+        ylabel : str, default="y"
+            y-axis label.
+        figsize : Tuple[int, int], default=(10, 6)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         fig, ax = plt.subplots(figsize=figsize)
         
-        # 绘制真实数据
+        # Scatter the observed data
         ax.scatter(x, y_true, alpha=0.5, label='Data', color='blue')
         
-        # 排序以绘制平滑曲线
+        # Sort x so the predicted curve is drawn as a smooth line
         sort_idx = np.argsort(x)
         x_sorted = x[sort_idx]
         y_pred_sorted = y_pred[sort_idx]
         
-        # 绘制预测曲线
+        # Plot the fitted curve
         ax.plot(x_sorted, y_pred_sorted, 'r-', linewidth=2, label='Fit')
         
         ax.set_xlabel(xlabel)
@@ -65,27 +65,27 @@ class Visualization:
                       title: str = "Residuals", xlabel: str = "x", 
                       ylabel: str = "Residual", figsize: Tuple[int, int] = (10, 6)) -> Figure:
         """
-        绘制残差图。
+        Plot the residuals.
         
-        参数
+        Parameters
         ----------
         x : np.ndarray
-            x 值
+            x values.
         residuals : np.ndarray
-            残差值
-        title : str, 默认="Residuals"
-            图标题
-        xlabel : str, 默认="x"
-            x 轴标签
-        ylabel : str, 默认="Residual"
-            y 轴标签
-        figsize : Tuple[int, int], 默认=(10, 6)
-            图像大小
+            Residual values.
+        title : str, default="Residuals"
+            Plot title.
+        xlabel : str, default="x"
+            x-axis label.
+        ylabel : str, default="Residual"
+            y-axis label.
+        figsize : Tuple[int, int], default=(10, 6)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         fig, ax = plt.subplots(figsize=figsize)
         
@@ -103,23 +103,23 @@ class Visualization:
     def plot_basis_functions(basis_set, x_range: Tuple[float, float] = (0, 1), 
                            n_points: int = 100, figsize: Tuple[int, int] = (12, 8)) -> Figure:
         """
-        绘制基函数。
+        Plot the basis functions.
         
-        参数
+        Parameters
         ----------
         basis_set
-            基集合对象
-        x_range : Tuple[float, float], 默认=(0, 1)
-            绘图的 x 范围
-        n_points : int, 默认=100
-            绘图的点数
-        figsize : Tuple[int, int], 默认=(12, 8)
-            图像大小
+            Basis-set object.
+        x_range : Tuple[float, float], default=(0, 1)
+            x range of the plot.
+        n_points : int, default=100
+            Number of plot points.
+        figsize : Tuple[int, int], default=(12, 8)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         x = np.linspace(x_range[0], x_range[1], n_points)
         
@@ -136,7 +136,8 @@ class Visualization:
                 
             ax = axes[i]
             
-            # 评估基函数（张量积基沿主维度切片，其余维度取 0）
+            # Evaluate each basis: tensor-product bases are sliced along the
+            # primary dimension, with all other dimensions set to zero
             y = np.zeros_like(x)
             for j, x_val in enumerate(x):
                 point = {d: 0.0 for d in basis.dims}
@@ -149,7 +150,7 @@ class Visualization:
             ax.set_ylabel("φ(x)")
             ax.grid(True, alpha=0.3)
         
-        # 隐藏未使用的子图
+        # Hide unused subplots
         for i in range(n_basis, len(axes)):
             axes[i].axis('off')
         
@@ -160,23 +161,23 @@ class Visualization:
     def plot_2d_surface(data: MultiDimData, values: np.ndarray, 
                        title: str = "2D Surface", figsize: Tuple[int, int] = (10, 8)) -> Figure:
         """
-        绘制二维曲面图。
+        Plot a 2-D surface.
         
-        参数
+        Parameters
         ----------
         data : MultiDimData
-            包含两个维度的数据容器
+            Data container with exactly two dimensions.
         values : np.ndarray
-            要绘制的值
-        title : str, 默认="2D Surface"
-            图标题
-        figsize : Tuple[int, int], 默认=(10, 8)
-            图像大小
+            Values to plot.
+        title : str, default="2D Surface"
+            Plot title.
+        figsize : Tuple[int, int], default=(10, 8)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         if data.n_dims != 2:
             raise ValueError("Data must have exactly 2 dimensions for 2D surface plot")
@@ -184,17 +185,12 @@ class Visualization:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, projection='3d')
         
-        # 提取维度数据
         dim0 = data.get_dim(0)
         dim1 = data.get_dim(1)
         
-        # 创建网格
         X, Y = np.meshgrid(np.unique(dim0), np.unique(dim1))
-        
-        # 重塑值以匹配网格
         Z = values.reshape(X.shape)
         
-        # 绘制曲面
         surf = ax.plot_surface(X, Y, Z, cmap='viridis', alpha=0.8, 
                               linewidth=0, antialiased=True)
         
@@ -211,40 +207,35 @@ class Visualization:
     def plot_contour(data: MultiDimData, values: np.ndarray, 
                     title: str = "Contour Plot", figsize: Tuple[int, int] = (10, 8)) -> Figure:
         """
-        绘制等高线图。
+        Plot a filled contour of a 2-D function.
         
-        参数
+        Parameters
         ----------
         data : MultiDimData
-            包含两个维度的数据容器
+            Data container with exactly two dimensions.
         values : np.ndarray
-            要绘制的值
-        title : str, 默认="Contour Plot"
-            图标题
-        figsize : Tuple[int, int], 默认=(10, 8)
-            图像大小
+            Values to plot.
+        title : str, default="Contour Plot"
+            Plot title.
+        figsize : Tuple[int, int], default=(10, 8)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         if data.n_dims != 2:
             raise ValueError("Data must have exactly 2 dimensions for contour plot")
         
         fig, ax = plt.subplots(figsize=figsize)
         
-        # 提取维度数据
         dim0 = data.get_dim(0)
         dim1 = data.get_dim(1)
         
-        # 创建网格
         X, Y = np.meshgrid(np.unique(dim0), np.unique(dim1))
-        
-        # 重塑值以匹配网格
         Z = values.reshape(X.shape)
         
-        # 绘制等高线
         contour = ax.contourf(X, Y, Z, levels=20, cmap='viridis')
         ax.contour(X, Y, Z, levels=20, colors='black', alpha=0.3)
         
@@ -260,23 +251,23 @@ class Visualization:
     def plot_coefficients(coefficients: np.ndarray, basis_names: Optional[List[str]] = None,
                          title: str = "Basis Coefficients", figsize: Tuple[int, int] = (10, 6)) -> Figure:
         """
-        绘制基系数柱状图。
+        Plot the basis coefficients as a bar chart.
         
-        参数
+        Parameters
         ----------
         coefficients : np.ndarray
-            系数值
-        basis_names : List[str], 可选
-            基函数名称
-        title : str, 默认="Basis Coefficients"
-            图标题
-        figsize : Tuple[int, int], 默认=(10, 6)
-            图像大小
+            Coefficient values.
+        basis_names : List[str], optional
+            Names of the basis functions.
+        title : str, default="Basis Coefficients"
+            Plot title.
+        figsize : Tuple[int, int], default=(10, 6)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         fig, ax = plt.subplots(figsize=figsize)
         
@@ -288,10 +279,10 @@ class Visualization:
         
         bars = ax.bar(indices, coefficients, alpha=0.7, color='steelblue')
         
-        # 在柱子上添加数值标签
+        # Annotate each bar with its value
         for bar in bars:
             height = bar.get_height()
-            if abs(height) > 0.01:  # 只为显著的数值添加标签
+            if abs(height) > 0.01:  # Label only values above the display threshold
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.3f}', ha='center', va='bottom' if height >= 0 else 'top',
                        fontsize=8)
@@ -310,21 +301,21 @@ class Visualization:
     def plot_learning_curve(loss_history: List[float], 
                            title: str = "Learning Curve", figsize: Tuple[int, int] = (10, 6)) -> Figure:
         """
-        绘制学习曲线。
+        Plot the loss history of an iterative solver.
         
-        参数
+        Parameters
         ----------
         loss_history : List[float]
-            各迭代步的损失值
-        title : str, 默认="Learning Curve"
-            图标题
-        figsize : Tuple[int, int], 默认=(10, 6)
-            图像大小
+            Loss value at each iteration.
+        title : str, default="Learning Curve"
+            Plot title.
+        figsize : Tuple[int, int], default=(10, 6)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         fig, ax = plt.subplots(figsize=figsize)
         
@@ -335,7 +326,8 @@ class Visualization:
         ax.set_ylabel('Loss')
         ax.set_title(title)
         ax.grid(True, alpha=0.3)
-        ax.set_yscale('log')  # 使用对数刻度以便更好地可视化
+        ax.set_yscale('log')  # Log scale to visualize the loss decay
+        plt.tight_layout()
         
         return fig
     
@@ -344,23 +336,23 @@ class Visualization:
                             threshold: Optional[float] = None,
                             title: str = "Singular Values", figsize: Tuple[int, int] = (10, 6)) -> Figure:
         """
-        绘制奇异值图。
+        Plot the singular values on a log scale.
         
-        参数
+        Parameters
         ----------
         singular_values : np.ndarray
-            奇异值
-        threshold : float, 可选
-            奇异值的阈值
-        title : str, 默认="Singular Values"
-            图标题
-        figsize : Tuple[int, int], 默认=(10, 6)
-            图像大小
+            Singular values.
+        threshold : float, optional
+            Threshold line to mark on the plot.
+        title : str, default="Singular Values"
+            Plot title.
+        figsize : Tuple[int, int], default=(10, 6)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         """
         fig, ax = plt.subplots(figsize=figsize)
         
@@ -384,21 +376,21 @@ class Visualization:
     def create_dashboard(figures: List[Figure], n_cols: int = 2, 
                         figsize: Tuple[int, int] = (15, 10)) -> Figure:
         """
-        由多个图形创建仪表盘。
+        Combine multiple figures into a dashboard.
         
-        参数
+        Parameters
         ----------
         figures : List[Figure]
-            要合并的图形列表
-        n_cols : int, 默认=2
-            仪表盘的列数
-        figsize : Tuple[int, int], 默认=(15, 10)
-            图像大小
+            Figures to combine.
+        n_cols : int, default=2
+            Number of dashboard columns.
+        figsize : Tuple[int, int], default=(15, 10)
+            Figure size.
             
-        返回
+        Returns
         -------
         Figure
-            合并后的仪表盘图形
+            Combined dashboard figure.
         """
         n_figures = len(figures)
         n_rows = (n_figures + n_cols - 1) // n_cols
@@ -406,30 +398,25 @@ class Visualization:
         dashboard_fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
         axes = axes.flatten() if n_figures > 1 else [axes]
         
-        # 先隐藏所有坐标轴
+        # Hide all axes initially
         for ax in axes:
             ax.axis('off')
         
-        # 将每个图形复制到仪表盘
+        # Copy each figure into the dashboard
         for i, fig in enumerate(figures):
             if i >= len(axes):
                 break
                 
-            # 获取图形的坐标轴
-            fig_axes = fig.axes
-            
-            # 在仪表盘中创建新的坐标轴
             dashboard_ax = axes[i]
             dashboard_ax.axis('on')
             
-            # 复制内容（简化处理——实际实现需要更复杂的操作）
-            # 这只是占位实现——实际实现需要
-            # 提取并重新绘制数据
+            # Placeholder: a full implementation would extract and redraw each
+            # figure's artists; here each panel shows a label only
             dashboard_ax.text(0.5, 0.5, f'Figure {i+1}', 
                             ha='center', va='center', fontsize=12)
             dashboard_ax.set_title(fig._suptitle.get_text() if fig._suptitle else f'Plot {i+1}')
         
-        # 隐藏未使用的坐标轴
+        # Hide unused axes
         for i in range(n_figures, len(axes)):
             axes[i].axis('off')
         
@@ -440,18 +427,18 @@ class Visualization:
     def save_figure(fig: Figure, filename: str, dpi: int = 300, 
                    bbox_inches: str = 'tight'):
         """
-        将图形保存到文件。
+        Save a figure to a file.
         
-        参数
+        Parameters
         ----------
         fig : Figure
-            Matplotlib 图形对象
+            Matplotlib figure object.
         filename : str
-            输出文件名
-        dpi : int, 默认=300
-            保存的分辨率（DPI）
-        bbox_inches : str, 默认='tight'
-            边界框尺寸（英寸）
+            Output file name.
+        dpi : int, default=300
+            Resolution in dots per inch.
+        bbox_inches : str, default='tight'
+            Bounding box in inches.
         """
         fig.savefig(filename, dpi=dpi, bbox_inches=bbox_inches)
         plt.close(fig)

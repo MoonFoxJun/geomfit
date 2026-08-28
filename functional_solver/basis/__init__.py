@@ -1,4 +1,4 @@
-"""功能求解器的基函数模块。"""
+"""Basis-function families and the basis factory for the functional solver."""
 
 from .factory import BasisFactory
 from .polynomial import PolynomialBasis

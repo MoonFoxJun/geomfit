@@ -1,4 +1,4 @@
-"""函数求解器的内积模块。"""
+"""Inner product module for the functional solver."""
 
 from .base import InnerProduct
 from .weight import WeightFunction

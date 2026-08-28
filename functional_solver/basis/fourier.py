@@ -1,15 +1,31 @@
-"""Fourier basis functions."""
+"""Fourier basis functions over a single dimension: real trigonometric, complex exponential, and DCT families."""
 
 import numpy as np
 from typing import List, Dict, Any
 from ..core.basis_container import BasisInfo
 
 class FourierBasis:
-    """Fourier basis functions."""
+    """Fourier basis functions over a single dimension."""
     
     @staticmethod
     def create_basis(dim: int, max_freq: int, L: float = 2*np.pi) -> List[BasisInfo]:
-        """Create Fourier basis functions up to specified frequency."""
+        """Create the real Fourier basis on [0, L]: the constant φ₀ ≡ 1 plus
+        cos(2πf x/L) and sin(2πf x/L) for f = 1, ..., max_freq.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the bases act on.
+        max_freq : int
+            Highest frequency (inclusive).
+        L : float, default=2π
+            Period of the trigonometric functions.
+
+        Returns
+        -------
+        List[BasisInfo]
+            The constant basis followed by a cosine and a sine basis per frequency.
+        """
         bases = []
         
         # Constant term (frequency 0)
@@ -42,7 +58,23 @@ class FourierBasis:
     
     @staticmethod
     def complex_fourier_basis(dim: int, max_freq: int, L: float = 2*np.pi) -> List[BasisInfo]:
-        """Create complex Fourier basis functions."""
+        """Create the complex Fourier basis φ_f(x) = exp(2πi f x / L) for
+        f = -max_freq, ..., max_freq.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the bases act on.
+        max_freq : int
+            Highest frequency magnitude (inclusive).
+        L : float, default=2π
+            Period of the exponentials.
+
+        Returns
+        -------
+        List[BasisInfo]
+            One complex exponential basis per frequency from -max_freq to max_freq.
+        """
         bases = []
         
         # Negative frequencies
@@ -58,7 +90,27 @@ class FourierBasis:
     
     @staticmethod
     def discrete_cosine_transform(dim: int, max_order: int, type_: int = 2) -> List[BasisInfo]:
-        """Create Discrete Cosine Transform (DCT) basis functions."""
+        """Create discrete cosine transform (DCT) basis functions.
+
+        DCT-II: φ_k(x) = cos(πk(x + 0.5)/N); DCT-IV: φ_k(x) = cos(π(k + 0.5)(x + 0.5)/N),
+        for k = 0, ..., max_order and N = max_order. For N = 0 every basis
+        degenerates to the constant 1.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the bases act on.
+        max_order : int
+            Highest basis index (inclusive); also the normalization N.
+        type_ : int, default=2
+            DCT variant: 2 (DCT-II) or 4 (DCT-IV).
+
+        Returns
+        -------
+        List[BasisInfo]
+            One DCT basis per index from 0 to max_order (empty if type_ is
+            neither 2 nor 4).
+        """
         bases = []
         
         if type_ == 2:  # DCT-II (most common)

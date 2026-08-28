@@ -1,41 +1,54 @@
-"""直和（加法模型）基构造 —— 独立保留的实现。
+"""Direct-sum (additive) basis construction — retained as an independent implementation.
 
-数学结构
---------
-直和空间 V = V₀ ⊕ V₁ ⊕ … 中的函数具有“加法”形式：
+Mathematical structure
+----------------------
+Functions in the direct-sum space V = V₀ ⊕ V₁ ⊕ … take the additive form
 
     f(x₁, …, x_d) = Σ_d Σ_j c_{d,j} φ_{d,j}(x_d)
 
-即每个维度上的基函数贡献直接相加，不产生任何交叉项（如 x·y）。
-这是与张量积基（f = Σ cᵢⱼ Xᵢ(x)Yⱼ(y)）相对的另一条路线。
+i.e. the per-dimension basis contributions are summed directly, with no
+cross terms such as x·y. This is the counterpart of the tensor-product
+basis (f = Σ cᵢⱼ Xᵢ(x)Yⱼ(y)).
 
-已知的数学问题（本模块仍保留该算法，但请知悉其局限）
-----------------------------------------------------
-1. 表达力受限：无法表示维度间的交互/乘积结构（如 x·y、sin(2πx)cos(2πy)），
-   完备性差、信息损失率高，对一般的多维函数逼近结果不佳。
-2. 常数重叠：若每个维度都提供常数基（x⁰、y⁰ …），直和中会重复出现常数
-   分量，使 Gram 矩阵奇异。本构造默认只保留第一个常数基（去重）。
-3. 当各维度贡献确实独立时，直和是合适的模型（可解释性也更好）。
+Known limitations (the algorithm is retained; be aware of these)
+----------------------------------------------------------------
+1. Limited expressiveness: interactions or products between dimensions
+   (e.g. x·y, sin(2πx)cos(2πy)) cannot be represented, so completeness is
+   poor and information loss is high for general multi-dimensional
+   function approximation.
+2. Constant overlap: if every dimension provides a constant basis
+   (x⁰, y⁰, …), the constant component is duplicated in the direct sum,
+   making the Gram matrix singular. This construction keeps only the first
+   constant basis by default (deduplication).
+3. The direct sum is an appropriate model when the per-dimension
+   contributions are genuinely independent (and is also more interpretable).
 
-与张量积的关系
--------------
-直和空间是张量积空间的一个低维子空间：取张量积基中“其他维度恒为常数因子”
-的那一部分即退化为直和。因此张量积基 ⊇ 直和基，表达能力更强。
+Relation to the tensor product
+------------------------------
+The direct-sum space is a low-dimensional subspace of the tensor-product
+space: restricting the tensor-product basis to the factors in which all
+but one dimension are constant recovers the direct sum. Hence
+tensor-product basis ⊇ direct-sum basis, and the former is strictly more
+expressive.
 
-保留理由 / 适用场景
--------------------
-- 高维数据：张量积基数量随维数指数增长（维数灾难），直和只按线性增长，
-  是高维下唯一可行的显式基路线。
-- 各维度独立贡献的领域问题（此时直和即是真实结构，无需交互项）。
+Rationale / use cases
+---------------------
+- High-dimensional data: the number of tensor-product bases grows
+  exponentially with dimension (curse of dimensionality), whereas the
+  direct sum grows only linearly — the only feasible explicit-basis route
+  in high dimensions.
+- Problems whose per-dimension contributions are independent, for which the
+  direct sum is the true structure and no interaction terms are needed.
 
-用法
-----
+Usage
+-----
     from functional_solver.basis.additive import AdditiveBasis
 
     x_bases = [BasisFactory.polynomial(dim=0, order=o) for o in range(3)]
     y_bases = [BasisFactory.polynomial(dim=1, order=o) for o in range(3)]
     basis_set = AdditiveBasis.build({0: x_bases, 1: y_bases})
-    # 等价于把各维基函数直接拼接进同一个 BasisSet（但会去重重复的常数基）
+    # Equivalent to concatenating the per-dimension bases into one BasisSet,
+    # except that duplicate constant bases are removed.
 """
 
 from typing import Dict, List
@@ -45,10 +58,23 @@ from ..core.basis_container import BasisInfo, BasisSet
 
 
 def _is_constant(basis: BasisInfo, rtol: float = 1e-12) -> bool:
-    """判断单维度基函数是否为常数函数（值不随坐标变化）。
+    """Return True if a single-dimensional basis is a constant function.
 
-    在三个探针点上求值，若相对变化可忽略则视为常数。
-    张量积基（多维度）无法用单维度探针判断，返回 False。
+    The basis is evaluated at three probe points; if the relative variation
+    is negligible it is treated as constant. Tensor-product (multi-dimensional)
+    bases cannot be probed on a single dimension and return False.
+
+    Parameters
+    ----------
+    basis : BasisInfo
+        Basis to test.
+    rtol : float, default=1e-12
+        Relative tolerance for the variation test.
+
+    Returns
+    -------
+    bool
+        True if the basis is constant, False otherwise.
     """
     dim = basis.dims[0]
     try:
@@ -60,35 +86,37 @@ def _is_constant(basis: BasisInfo, rtol: float = 1e-12) -> bool:
         return False
     scale = float(np.max(np.abs(vals)))
     if scale == 0.0:
-        return True  # 处处为零的基也算“常数型”
+        return True  # a basis that is zero everywhere is also treated as constant
     return bool(np.max(np.abs(vals - vals[0])) <= rtol * scale)
 
 
 class AdditiveBasis:
-    """直和（加法模型）基集合构造器。
+    """Constructor of direct-sum (additive-model) basis sets.
 
-    把每个维度的基函数拼接成同一个 BasisSet，函数形式为
-        f(x₁, …, x_d) = Σ_d Σ_j c_{d,j} φ_{d,j}(x_d)
+    Concatenates the per-dimension bases into a single BasisSet; the resulting
+    model is f(x₁, …, x_d) = Σ_d Σ_j c_{d,j} φ_{d,j}(x_d).
     """
 
     @staticmethod
     def build(dim_bases: Dict[int, List[BasisInfo]],
               deduplicate_constants: bool = True) -> BasisSet:
         """
-        构造直和基集合。
+        Build the direct-sum basis set.
 
-        参数
-        ----
+        Parameters
+        ----------
         dim_bases : Dict[int, List[BasisInfo]]
-            维度索引 -> 该维度的基函数列表
-        deduplicate_constants : bool, 默认=True
-            是否只保留第一个常数基（跨维度共享的常数分量），
-            避免重复的常数列导致 Gram 矩阵奇异
+            Dimension index -> list of bases for that dimension.
+        deduplicate_constants : bool, default=True
+            Keep only the first constant basis (the constant component shared
+            across dimensions), avoiding repeated constant columns that make
+            the Gram matrix singular.
 
-        返回
-        ----
+        Returns
+        -------
         BasisSet
-            直和基集合（各维基函数拼接；张量积基也可作为其中的元素传入）
+            The direct-sum basis set (per-dimension bases concatenated;
+            tensor-product bases may also be passed as elements).
         """
         basis_set = BasisSet()
         seen_constant = False
@@ -99,7 +127,7 @@ class AdditiveBasis:
                     if not seen_constant:
                         seen_constant = True
                         basis_set.add_basis(basis)
-                    # 已见过常数基：跳过后续的重复常数
+                    # a constant basis was already added; skip subsequent duplicates
                 else:
                     basis_set.add_basis(basis)
 

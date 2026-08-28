@@ -1,4 +1,4 @@
-"""测试直和（加法模型）基构造（保留模块）"""
+"""Tests for the direct-sum (additive model) basis construction (legacy module)."""
 
 import sys
 import os
@@ -13,19 +13,19 @@ from functional_solver.solver.functional_solver import FunctionalSolver
 
 
 def test_additive_constant_dedup():
-    """直和构造应去重跨维度的重复常数基"""
+    """The direct-sum construction should deduplicate constant bases repeated across dimensions."""
     x_bases = [BasisFactory.polynomial(dim=0, order=o) for o in range(3)]
     y_bases = [BasisFactory.polynomial(dim=1, order=o) for o in range(3)]
 
-    # 不去重：3 + 3 = 6 个基（含两个常数 1）
+    # Without deduplication: 3 + 3 = 6 bases (including two constant bases 1)
     raw = AdditiveBasis.build({0: x_bases, 1: y_bases}, deduplicate_constants=False)
     assert len(raw) == 6
 
-    # 去重：常数只保留一个 → 5 个基
+    # With deduplication: a single constant remains → 5 bases
     bs = AdditiveBasis.build({0: x_bases, 1: y_bases})
     assert len(bs) == 5
 
-    # 设计矩阵中全 1 的列恰好一列
+    # The design matrix should contain exactly one all-ones column
     data = MultiDimData({0: np.linspace(0, 1, 10), 1: np.linspace(0, 1, 10)})
     Phi = bs.evaluate_all(data)
     ones_cols = int(np.sum(np.all(np.abs(Phi - 1.0) < 1e-12, axis=0)))
@@ -33,7 +33,7 @@ def test_additive_constant_dedup():
 
 
 def test_additive_fits_additive_function():
-    """直和能精确拟合纯加法函数 f = 1 + 2x - y"""
+    """The direct sum can fit the purely additive function f = 1 + 2x - y exactly."""
     rng = np.random.default_rng(1)
     x = rng.uniform(0, 1, 40)
     y = rng.uniform(0, 1, 40)
@@ -60,4 +60,4 @@ if __name__ == "__main__":
     print("✓ test_additive_constant_dedup passed")
     test_additive_fits_additive_function()
     print("✓ test_additive_fits_additive_function passed")
-    print("\n所有直和基测试通过！")
+    print("\nAll direct-sum basis tests passed!")

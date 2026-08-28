@@ -1,4 +1,4 @@
-"""Functional Solver - 泛函解算器"""
+"""Functional Solver - a unified framework for functional approximation."""
 
 from .core.data_container import MultiDimData
 from .core.basis_container import BasisSet, BasisInfo

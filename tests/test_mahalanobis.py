@@ -1,4 +1,4 @@
-"""测试马氏距离核"""
+"""Tests for the Mahalanobis distance kernel."""
 
 import sys
 import os
@@ -12,7 +12,7 @@ from functional_solver.kernel.rbf import RBFKernel
 
 
 def test_mahalanobis_equals_rbf_for_isotropic_metric():
-    """metric = I 时马氏核退化为长度尺度 1 的普通 RBF"""
+    """With metric = I, the Mahalanobis kernel reduces to a plain RBF with length scale 1."""
     k_m = MahalanobisKernel(sigma=2.0, metric=np.eye(1))
     k_r = RBFKernel(sigma=2.0, length_scale=1.0)
     assert np.allclose(k_m({0: 0.3}, {0: 0.7}), k_r({0: 0.3}, {0: 0.7}))
@@ -25,7 +25,7 @@ def test_mahalanobis_equals_rbf_for_isotropic_metric():
 
 
 def test_mahalanobis_matrix_symmetry_psd():
-    """核矩阵对称且（数值上）半正定"""
+    """The kernel matrix is symmetric and numerically positive semi-definite."""
     rng = np.random.default_rng(0)
     x = rng.uniform(0, 1, 30)
     y = x + rng.normal(0, 0.02, 30)
@@ -39,7 +39,7 @@ def test_mahalanobis_matrix_symmetry_psd():
 
 
 def test_mahalanobis_fits_correlated_band():
-    """马氏核 + 岭正则能在强相关窄带上精确插值（误差≈噪声水平）"""
+    """The Mahalanobis kernel with ridge regularization interpolates accurately on a strongly correlated band (error ≈ noise level)."""
     rng = np.random.default_rng(4)
     n = 60
     x = rng.uniform(0.1, 0.9, n)
@@ -57,7 +57,7 @@ def test_mahalanobis_fits_correlated_band():
 
 
 def test_mahalanobis_auto_metric_from_data():
-    """metric=None 时首次 compute_matrix 自动从数据估计度量"""
+    """With metric=None, the first compute_matrix call estimates the metric automatically from the data."""
     rng = np.random.default_rng(5)
     x = rng.uniform(0, 1, 30)
     y = x + rng.normal(0, 0.02, 30)
@@ -68,10 +68,10 @@ def test_mahalanobis_auto_metric_from_data():
     K = kern.compute_matrix(data)
     assert kern._effective_metric is not None
     assert K.shape == (30, 30)
-    # 自动估计的度量应反映数据相关性（沿次轴方向权重更大）
+    # The auto-estimated metric should reflect data correlation (larger weight along the minor axis)
     M = kern._effective_metric
-    v = np.array([1.0, -1.0]) / np.sqrt(2.0)   # 次轴方向（y-x）
-    assert v @ M @ v > M[0, 0]                  # 次轴方向距离权重更大
+    v = np.array([1.0, -1.0]) / np.sqrt(2.0)   # minor-axis direction (y-x)
+    assert v @ M @ v > M[0, 0]                  # distances along the minor axis are weighted more heavily
 
 
 if __name__ == "__main__":
@@ -83,4 +83,4 @@ if __name__ == "__main__":
     print("✓ test_mahalanobis_fits_correlated_band passed")
     test_mahalanobis_auto_metric_from_data()
     print("✓ test_mahalanobis_auto_metric_from_data passed")
-    print("\n所有马氏核测试通过！")
+    print("\nAll Mahalanobis kernel tests passed!")

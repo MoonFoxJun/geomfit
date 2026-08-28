@@ -11,7 +11,7 @@ setup(
     version="0.1.0",
     author="Your Name",
     author_email="your.email@example.com",
-    description="A functional solver library for solving functional optimization problems",
+    description="Function approximation and functional optimization via basis expansion and kernel methods",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/functional_solver",

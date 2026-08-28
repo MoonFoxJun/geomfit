@@ -1,14 +1,21 @@
-"""数据预处理：PCA 坐标旋转（解耦强相关维度）。
+"""Data preprocessing: PCA coordinate rotation (decorrelating strongly
+correlated dimensions).
 
-背景
-----
-张量积基天然假设数据落在笛卡尔直积域（超立方体）上，且各坐标正交。
-当数据集中在某个斜方向上（如窄带 y ≈ x）时：
-- 各维基函数在数据上几乎线性相关 → Gram 矩阵病态、系数巨大；
-- 大部分基函数在为“没有数据的虚空”分配自由度（浪费）。
-PCA 把坐标旋转到数据方差最大的正交主轴上，使各主成分互不相关：
-- 旋转后再做张量积，基列近似共线的问题消失；
-- 丢弃近零方差的主成分（n_components < d）可顺带降维。
+Background
+----------
+Tensor-product bases implicitly assume that data lie on a Cartesian product
+domain (a hypercube) with orthogonal coordinates. When data are concentrated
+along an oblique direction (e.g. a narrow band y ≈ x):
+
+- basis functions become almost linearly dependent on the data, which makes
+  the Gram matrix ill-conditioned and the coefficients huge;
+- most basis functions waste degrees of freedom on regions without data.
+
+PCA rotates the coordinates onto the orthogonal principal axes of the data
+variance, making the principal components mutually uncorrelated:
+
+- after the rotation, near-collinearity of the basis columns disappears;
+- dropping near-zero-variance components (n_components < d) reduces dimension.
 """
 
 from typing import Dict, Any, Optional, Tuple
@@ -21,34 +28,39 @@ def pca_rotate(data: MultiDimData,
                n_components: Optional[int] = None,
                whiten: bool = False) -> Tuple[MultiDimData, Dict[str, Any]]:
     """
-    对 MultiDimData 做 PCA 坐标旋转（解耦/白化）。
+    Rotate (and optionally truncate or whiten) the coordinates of data via PCA.
 
-    参数
-    ----
+    The rotation is obtained from the SVD of the centered coordinate matrix,
+    Xc = U S Vᵀ, so that the columns of V are the principal directions.
+
+    Parameters
+    ----------
     data : MultiDimData
-        原始数据
-    n_components : int, 可选
-        保留的主成分个数（默认保留全部）
-    whiten : bool, 默认=False
-        是否按奇异值缩放（白化）：旋转后各主轴方差归一
+        Input data.
+    n_components : int, optional
+        Number of principal components to keep (default: keep all).
+    whiten : bool, default=False
+        If True, scale each principal component by its singular value so that
+        the rotated axes have unit variance.
 
-    返回
-    ----
-    (rotated, info)
+    Returns
+    -------
     rotated : MultiDimData
-        旋转（可选降维/白化）后的数据，维度索引为 0..k-1
+        Rotated data with dimension indices 0..k-1, optionally truncated or
+        whitened.
     info : Dict
-        {"components": V (d×k 旋转矩阵), "mean": 中心向量,
-         "singular_values": 奇异值, "explained_variance_ratio": 各主轴方差占比,
-         "whiten": 是否白化}
-        可用 pca_transform / pca_rotate_back 复用该信息处理新数据。
+        Dictionary with "components" (V, the d x k rotation matrix), "mean"
+        (centering vector), "singular_values", "explained_variance_ratio",
+        and "whiten". Pass it to pca_transform / pca_rotate_back to process
+        new data.
     """
     X = data.get_coordinate_matrix()          # (n, d)
     n, d = X.shape
     mean = X.mean(axis=0)
     Xc = X - mean
 
-    # SVD: Xc = U S Vᵀ，V 的列是协方差矩阵的特征向量（主成分方向）
+    # SVD: Xc = U S Vᵀ; the columns of V are the eigenvectors of the
+    # covariance matrix (the principal directions)
     _, s, Vt = np.linalg.svd(Xc, full_matrices=False)
 
     if n_components is None:
@@ -66,7 +78,7 @@ def pca_rotate(data: MultiDimData,
     ratio = (s ** 2) / total_var if total_var > 0 else np.zeros_like(s)
 
     rotated = MultiDimData({i: Y[:, i] for i in range(k)})
-    rotated.values = data.values             # 目标值跟随数据点，不随坐标变换
+    rotated.values = data.values             # Target values follow the data points and are unchanged by the coordinate transform
 
     info = {
         "components": V,
@@ -80,9 +92,10 @@ def pca_rotate(data: MultiDimData,
 
 def pca_transform(data: MultiDimData, info: Dict[str, Any]) -> MultiDimData:
     """
-    用已拟合的 PCA 信息（pca_rotate 返回的 info）变换新数据。
+    Transform new data with PCA information fitted by pca_rotate.
 
-    新数据（测试集/网格）必须使用训练时拟合的同一旋转，否则坐标系不一致。
+    New data (test set or grid) must use the same rotation fitted on the
+    training data, otherwise the coordinate systems are inconsistent.
     """
     X = data.get_coordinate_matrix()
     V = info["components"]
@@ -101,19 +114,20 @@ def pca_transform(data: MultiDimData, info: Dict[str, Any]) -> MultiDimData:
 
 def pca_rotate_back(point: Dict[int, float], info: Dict[str, Any]) -> Dict[int, float]:
     """
-    把旋转坐标系下的单个点还原到原始坐标系（用于解释/画图）。
+    Map a single point from the rotated coordinates back to the original
+    coordinates (e.g. for interpretation or plotting).
 
-    参数
-    ----
+    Parameters
+    ----------
     point : Dict[int, float]
-        旋转坐标系下的点（键 0..k-1）
+        Point in the rotated coordinates (keys 0..k-1).
     info : Dict
-        pca_rotate 返回的信息
+        Information returned by pca_rotate.
 
-    返回
-    ----
+    Returns
+    -------
     Dict[int, float]
-        原始坐标系下的点
+        Point in the original coordinates.
     """
     k = len(point)
     y = np.array([point[i] for i in sorted(point.keys())], dtype=float)

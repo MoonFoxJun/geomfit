@@ -1,4 +1,4 @@
-"""测试数据结构"""
+"""Tests for the data structures."""
 
 import sys
 import os
@@ -8,15 +8,15 @@ import numpy as np
 from functional_solver.core.data_container import MultiDimData
 
 def test_multi_dim_data_creation():
-    """测试MultiDimData创建"""
-    # 创建1D数据
+    """Test MultiDimData creation."""
+    # Create 1D data
     data_1d = MultiDimData({0: np.array([1.0, 2.0, 3.0])})
     assert data_1d.n_dims == 1
     assert data_1d.n_points == 3
     assert 0 in data_1d.dims
     assert np.array_equal(data_1d.get_dim(0), np.array([1.0, 2.0, 3.0]))
     
-    # 创建2D数据
+    # Create 2D data
     data_2d = MultiDimData({
         0: np.array([1.0, 2.0, 3.0]),
         1: np.array([4.0, 5.0, 6.0])
@@ -29,34 +29,34 @@ def test_multi_dim_data_creation():
     assert np.array_equal(data_2d.get_dim(1), np.array([4.0, 5.0, 6.0]))
 
 def test_multi_dim_data_get_point():
-    """测试获取数据点"""
+    """Test retrieving individual data points."""
     data = MultiDimData({
         0: np.array([1.0, 2.0, 3.0]),
         1: np.array([4.0, 5.0, 6.0]),
         2: np.array([7.0, 8.0, 9.0])
     })
     
-    # 测试获取第一个点
+    # Retrieve the first point
     point0 = data.get_point(0)
     assert point0 == {0: 1.0, 1: 4.0, 2: 7.0}
     
-    # 测试获取第二个点
+    # Retrieve the second point
     point1 = data.get_point(1)
     assert point1 == {0: 2.0, 1: 5.0, 2: 8.0}
     
-    # 测试获取第三个点
+    # Retrieve the third point
     point2 = data.get_point(2)
     assert point2 == {0: 3.0, 1: 6.0, 2: 9.0}
     
-    # 测试索引越界
+    # An out-of-range index should raise IndexError
     try:
         data.get_point(3)
-        assert False, "应该抛出IndexError"
+        assert False, "should raise IndexError"
     except IndexError:
         pass
 
 def test_multi_dim_data_get_all_points():
-    """测试获取所有数据点"""
+    """Test retrieving all data points."""
     data = MultiDimData({
         0: np.array([1.0, 2.0]),
         1: np.array([3.0, 4.0])
@@ -68,88 +68,88 @@ def test_multi_dim_data_get_all_points():
     assert points[1] == {0: 2.0, 1: 4.0}
 
 def test_multi_dim_data_validation():
-    """测试数据验证"""
-    # 测试不同长度的维度数据
+    """Test data validation."""
+    # Dimensions of mismatched lengths should raise ValueError
     try:
         MultiDimData({
             0: np.array([1.0, 2.0, 3.0]),
-            1: np.array([4.0, 5.0])  # 长度不一致
+            1: np.array([4.0, 5.0])  # mismatched lengths
         })
-        assert False, "应该抛出ValueError"
+        assert False, "should raise ValueError"
     except ValueError as e:
         assert "must have the same length" in str(e)
     
-    # 测试空数据
+    # Empty data should raise ValueError
     try:
         MultiDimData({})
-        assert False, "应该抛出ValueError"
+        assert False, "should raise ValueError"
     except ValueError as e:
         assert "must contain at least one dimension" in str(e)
     
-    # 测试非数组数据
+    # Non-array data should raise TypeError
     try:
-        MultiDimData({0: [1.0, 2.0, 3.0]})  # 列表而不是numpy数组
-        assert False, "应该抛出TypeError"
+        MultiDimData({0: [1.0, 2.0, 3.0]})  # a list instead of a numpy array
+        assert False, "should raise TypeError"
     except TypeError as e:
         assert "must be numpy arrays" in str(e)
 
 def test_multi_dim_data_values():
-    """测试数据值"""
+    """Test the values attribute."""
     data = MultiDimData({0: np.array([1.0, 2.0, 3.0])})
     
-    # 初始时values应该为None
+    # values should be None initially
     assert data.values is None
     
-    # 设置values
+    # Set values
     data.values = np.array([10.0, 20.0, 30.0])
     assert np.array_equal(data.values, np.array([10.0, 20.0, 30.0]))
     
-    # 测试values长度验证
+    # A mismatched length should raise ValueError
     try:
-        data.values = np.array([10.0, 20.0])  # 长度不一致
-        assert False, "应该抛出ValueError"
+        data.values = np.array([10.0, 20.0])  # mismatched length
+        assert False, "should raise ValueError"
     except ValueError as e:
         assert "must have the same length" in str(e)
 
 def test_multi_dim_data_operations():
-    """测试数据操作"""
+    """Test arithmetic operations on data."""
     data1 = MultiDimData({0: np.array([1.0, 2.0, 3.0])})
     data2 = MultiDimData({0: np.array([4.0, 5.0, 6.0])})
     
-    # 测试加法
+    # Addition
     data_sum = data1 + data2
     assert np.array_equal(data_sum.get_dim(0), np.array([5.0, 7.0, 9.0]))
     
-    # 测试减法
+    # Subtraction
     data_diff = data2 - data1
     assert np.array_equal(data_diff.get_dim(0), np.array([3.0, 3.0, 3.0]))
     
-    # 测试标量乘法
+    # Scalar multiplication
     data_scaled = data1 * 2.0
     assert np.array_equal(data_scaled.get_dim(0), np.array([2.0, 4.0, 6.0]))
     
-    # 测试标量除法
+    # Scalar division
     data_divided = data2 / 2.0
     assert np.array_equal(data_divided.get_dim(0), np.array([2.0, 2.5, 3.0]))
 
 def test_multi_dim_data_statistics():
-    """测试数据统计"""
+    """Test summary statistics."""
     data = MultiDimData({
         0: np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
         1: np.array([2.0, 4.0, 6.0, 8.0, 10.0])
     })
     
-    # 测试均值
+    # Mean
     means = data.mean()
     assert means[0] == 3.0
     assert means[1] == 6.0
     
-    # 测试标准差
+    # Standard deviation
     stds = data.std()
     assert np.allclose(stds[0], np.std([1.0, 2.0, 3.0, 4.0, 5.0]))
     assert np.allclose(stds[1], np.std([2.0, 4.0, 6.0, 8.0, 10.0]))
     
-    # 测试最小值和最大值
+    # Minimum and maximum
     mins = data.min()
     maxs = data.max()
     assert mins[0] == 1.0
@@ -158,19 +158,19 @@ def test_multi_dim_data_statistics():
     assert maxs[1] == 10.0
 
 def test_multi_dim_data_slicing():
-    """测试数据切片"""
+    """Test slicing and masking."""
     data = MultiDimData({
         0: np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
         1: np.array([6.0, 7.0, 8.0, 9.0, 10.0])
     })
     
-    # 测试切片
+    # Slice by index list
     sliced = data.slice(indices=[0, 2, 4])
     assert sliced.n_points == 3
     assert np.array_equal(sliced.get_dim(0), np.array([1.0, 3.0, 5.0]))
     assert np.array_equal(sliced.get_dim(1), np.array([6.0, 8.0, 10.0]))
     
-    # 测试布尔掩码
+    # Boolean mask
     mask = np.array([True, False, True, False, True])
     masked = data.mask(mask)
     assert masked.n_points == 3
@@ -178,16 +178,16 @@ def test_multi_dim_data_slicing():
     assert np.array_equal(masked.get_dim(1), np.array([6.0, 8.0, 10.0]))
 
 def test_multi_dim_data_concatenation():
-    """测试数据拼接"""
+    """Test concatenation."""
     data1 = MultiDimData({0: np.array([1.0, 2.0])})
     data2 = MultiDimData({0: np.array([3.0, 4.0])})
     
-    # 测试垂直拼接
+    # Concatenate along points (axis=0)
     concatenated = MultiDimData.concatenate([data1, data2], axis=0)
     assert concatenated.n_points == 4
     assert np.array_equal(concatenated.get_dim(0), np.array([1.0, 2.0, 3.0, 4.0]))
     
-    # 测试水平拼接（需要相同数据点数量）
+    # Concatenate along dimensions (axis=1; requires equal point counts)
     data3 = MultiDimData({
         0: np.array([1.0, 2.0]),
         1: np.array([3.0, 4.0])
@@ -204,48 +204,48 @@ def test_multi_dim_data_concatenation():
     assert np.array_equal(concatenated_h.get_dim(3), np.array([7.0, 8.0]))
 
 def test_multi_dim_data_save_load():
-    """测试数据保存和加载"""
+    """Test saving and loading data."""
     import tempfile
     import pickle
     
-    # 创建测试数据
+    # Create test data
     original_data = MultiDimData({
         0: np.array([1.0, 2.0, 3.0]),
         1: np.array([4.0, 5.0, 6.0])
     })
     original_data.values = np.array([10.0, 20.0, 30.0])
     
-    # 保存到临时文件
+    # Save to a temporary file
     with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.pkl') as f:
         temp_file = f.name
         pickle.dump(original_data, f)
     
     try:
-        # 从文件加载
+        # Load from file
         with open(temp_file, 'rb') as f:
             loaded_data = pickle.load(f)
         
-        # 验证加载的数据
+        # Verify the loaded data
         assert loaded_data.n_dims == 2
         assert loaded_data.n_points == 3
         assert np.array_equal(loaded_data.get_dim(0), np.array([1.0, 2.0, 3.0]))
         assert np.array_equal(loaded_data.get_dim(1), np.array([4.0, 5.0, 6.0]))
         assert np.array_equal(loaded_data.values, np.array([10.0, 20.0, 30.0]))
     finally:
-        # 清理临时文件
+        # Clean up the temporary file
         import os
         os.unlink(temp_file)
 
 def test_multi_dim_data_from_array():
-    """测试从数组创建MultiDimData"""
-    # 1D数组
+    """Test MultiDimData creation from an array."""
+    # 1D array
     array_1d = np.array([1.0, 2.0, 3.0])
     data_1d = MultiDimData.from_array(array_1d, dim=0)
     assert data_1d.n_dims == 1
     assert data_1d.n_points == 3
     assert np.array_equal(data_1d.get_dim(0), array_1d)
     
-    # 2D数组（每列是一个维度）
+    # 2D array (each column is a dimension)
     array_2d = np.array([[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]])
     data_2d = MultiDimData.from_array(array_2d, dims=[0, 1])
     assert data_2d.n_dims == 2
@@ -253,27 +253,27 @@ def test_multi_dim_data_from_array():
     assert np.array_equal(data_2d.get_dim(0), np.array([1.0, 2.0, 3.0]))
     assert np.array_equal(data_2d.get_dim(1), np.array([4.0, 5.0, 6.0]))
     
-    # 测试自动分配维度
+    # Dimensions are assigned automatically when omitted
     data_auto = MultiDimData.from_array(array_2d)
     assert data_auto.n_dims == 2
     assert data_auto.dims == [0, 1]
 
 def test_multi_dim_data_to_array():
-    """测试MultiDimData转换为数组"""
+    """Test conversion of MultiDimData to an array."""
     data = MultiDimData({
         0: np.array([1.0, 2.0, 3.0]),
         1: np.array([4.0, 5.0, 6.0]),
         2: np.array([7.0, 8.0, 9.0])
     })
     
-    # 转换为数组
+    # Convert to an array
     array = data.to_array()
-    assert array.shape == (3, 3)  # 3个点，3个维度
+    assert array.shape == (3, 3)  # 3 points, 3 dimensions
     assert np.array_equal(array[:, 0], np.array([1.0, 2.0, 3.0]))
     assert np.array_equal(array[:, 1], np.array([4.0, 5.0, 6.0]))
     assert np.array_equal(array[:, 2], np.array([7.0, 8.0, 9.0]))
     
-    # 测试指定维度顺序
+    # Custom dimension ordering
     array_ordered = data.to_array(dims=[2, 0, 1])
     assert np.array_equal(array_ordered[:, 0], np.array([7.0, 8.0, 9.0]))
     assert np.array_equal(array_ordered[:, 1], np.array([1.0, 2.0, 3.0]))
@@ -316,4 +316,4 @@ if __name__ == "__main__":
     test_multi_dim_data_to_array()
     print("✓ test_multi_dim_data_to_array passed")
     
-    print("\n所有数据结构测试通过！")
+    print("\nAll data structure tests passed!")

@@ -1,4 +1,4 @@
-"""主解算器 - 整合所有模块"""
+"""Main solver integrating the basis-set and kernel formulations."""
 
 import numpy as np
 from typing import Optional, Dict, Any
@@ -9,7 +9,7 @@ from ..inner_product.base import InnerProduct
 from ..kernel.base import Kernel
 
 class FunctionalSolver:
-    """泛函解算器主类"""
+    """Main functional solver supporting both the basis-set and kernel paths."""
     
     def __init__(self):
         self.basis_set = None
@@ -21,50 +21,51 @@ class FunctionalSolver:
         self.debug_info = {}
     
     def set_basis(self, basis_set: BasisSet):
-        """设置基函数集合"""
+        """Set the basis-set formulation."""
         self.basis_set = basis_set
-        self.kernel = None  # 互斥
+        self.kernel = None  # Mutually exclusive with the kernel formulation
     
     def set_kernel(self, kernel: Kernel):
-        """设置核函数（覆盖基函数方式）"""
+        """Set the kernel formulation (overrides the basis-set formulation)."""
         self.kernel = kernel
-        self.basis_set = None  # 互斥
+        self.basis_set = None  # Mutually exclusive with the basis-set formulation
     
     def set_inner_product(self, inner_product: InnerProduct):
-        """设置内积定义"""
+        """Set the inner-product definition."""
         self.inner_product = inner_product
     
     def load_data(self, data: MultiDimData, target: np.ndarray):
-        """加载数据"""
+        """Load the training data."""
         self.data = data
         self.target = target
-        assert data.n_points == len(target), "数据点数量与目标值数量不匹配"
+        assert data.n_points == len(target), "Number of data points must match target values"
     
     def solve(self, regularization: Optional[Dict] = None) -> np.ndarray:
-        """求解最优系数"""
+        """Solve for the optimal coefficients."""
         if self.data is None or self.target is None:
-            raise ValueError("请先加载数据")
+            raise ValueError("Load data first")
         
         if self.kernel is not None:
-            # 核方法
+            # Kernel formulation
             return self._solve_kernel(regularization)
         elif self.basis_set is not None:
-            # 基函数方法
+            # Basis-set formulation
             return self._solve_basis(regularization)
         else:
-            raise ValueError("请先设置基函数集合或核函数")
+            raise ValueError("Set a basis set or a kernel first")
     
     def _solve_basis(self, regularization: Optional[Dict] = None) -> np.ndarray:
-        """基函数方法求解"""
+        """Solve via the basis-set formulation: the normal equations Gc = b."""
         from ..inner_product.regularization import Regularization
         
         Phi = self.basis_set.evaluate_all(self.data)
         G = self.inner_product.compute_gram_matrix(Phi, self.data)
 
-        # 右端项：bᵢ = ⟨φᵢ, y⟩（与 Gram 矩阵使用同一内积定义，保证 Gc=b 自洽）
+        # Right-hand side b_i = ⟨φ_i, y⟩, using the same inner product as the
+        # Gram matrix so that the normal equations Gc = b are consistent.
         b = self.inner_product.rhs_vector(Phi, self.target, self.data)
         
-        # 奇异性检测
+        # Singularity check
         singularity_info = Regularization.check_singularity(G)
         self.debug_info["singularity"] = singularity_info
         
@@ -81,7 +82,7 @@ class FunctionalSolver:
                 self.debug_info["method"] = "basis_svd"
                 return self.coefficients
         
-        # 解方程
+        # Solve the normal equations Gc = b
         try:
             self.coefficients = np.linalg.solve(G, b)
         except np.linalg.LinAlgError:
@@ -91,7 +92,7 @@ class FunctionalSolver:
         return self.coefficients
     
     def _solve_kernel(self, regularization: Optional[Dict] = None) -> np.ndarray:
-        """核方法求解"""
+        """Solve the ridge-regularized kernel system (K + alpha I) alpha = y."""
         K = self.kernel.compute_matrix(self.data)
         
         if regularization and "alpha" in regularization:
@@ -102,9 +103,9 @@ class FunctionalSolver:
         return self.coefficients
     
     def predict(self, new_data: MultiDimData) -> np.ndarray:
-        """对新数据进行预测"""
+        """Predict on new data."""
         if self.coefficients is None:
-            raise ValueError("请先调用solve()")
+            raise ValueError("Call solve() first")
         
         if self.kernel is not None:
             return self._predict_kernel(new_data)
@@ -130,11 +131,11 @@ class FunctionalSolver:
         return K_pred @ self.coefficients
     
     def get_debug_info(self) -> Dict[str, Any]:
-        """获取调试信息"""
+        """Return the debug information dictionary."""
         return self.debug_info
     
     def reset(self):
-        """重置解算器状态"""
+        """Reset the solver state."""
         self.basis_set = None
         self.inner_product = None
         self.kernel = None

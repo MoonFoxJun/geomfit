@@ -1,15 +1,30 @@
-"""小波基函数。"""
+"""Wavelet basis functions over a single dimension: Mexican hat, Morlet, and Haar families."""
 
 import numpy as np
 from typing import List, Dict, Any
 from ..core.basis_container import BasisInfo
 
 class WaveletBasis:
-    """小波基函数。"""
+    """Wavelet basis functions over a single dimension."""
     
     @staticmethod
     def mexican_hat(dim: int, center: float, scale: float) -> BasisInfo:
-        """墨西哥帽小波（Ricker 小波）。"""
+        """Mexican-hat (Ricker) wavelet: φ(x) = (1 − t²)exp(−t²/2), t = (x − center)/scale.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        center : float
+            Wavelet center (translation).
+        scale : float
+            Wavelet scale.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor Mexican-hat wavelet basis.
+        """
         def func(x, center, scale):
             t = (x - center) / scale
             return (1 - t ** 2) * np.exp(-t ** 2 / 2)
@@ -23,7 +38,24 @@ class WaveletBasis:
     
     @staticmethod
     def morlet(dim: int, scale: float, translation: float, omega0: float = 5.0) -> BasisInfo:
-        """Morlet 小波。"""
+        """Morlet wavelet: φ(x) = cos(ω₀t)exp(−t²/2), t = (x − translation)/scale.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        scale : float
+            Wavelet scale.
+        translation : float
+            Wavelet translation.
+        omega0 : float, default=5.0
+            Central angular frequency of the carrier wave.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor Morlet wavelet basis.
+        """
         def func(x, scale, translation, omega0):
             t = (x - translation) / scale
             return np.cos(omega0 * t) * np.exp(-t ** 2 / 2)
@@ -37,7 +69,23 @@ class WaveletBasis:
     
     @staticmethod
     def haar(dim: int, scale: float, translation: float) -> BasisInfo:
-        """Haar 小波。"""
+        """Haar wavelet: 1 for 0 ≤ t < 0.5, −1 for 0.5 ≤ t < 1, 0 otherwise,
+        t = (x − translation)/scale.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        scale : float
+            Wavelet scale.
+        translation : float
+            Wavelet translation.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor Haar wavelet basis.
+        """
         def func(x, scale, translation):
             t = (x - translation) / scale
             if 0 <= t < 0.5:
@@ -57,7 +105,26 @@ class WaveletBasis:
     @staticmethod
     def create_wavelet_basis(dim: int, scales: List[float], translations: List[float], 
                             wavelet_type: str = "mexican_hat", **kwargs) -> List[BasisInfo]:
-        """创建包含多个尺度和平移的小波基函数。"""
+        """Create wavelet bases for every (scale, translation) combination.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the bases act on.
+        scales : List[float]
+            Wavelet scales.
+        translations : List[float]
+            Wavelet translations.
+        wavelet_type : str, default="mexican_hat"
+            One of "mexican_hat", "morlet" or "haar".
+        **kwargs
+            Type-specific parameters, e.g. omega0 (morlet).
+
+        Returns
+        -------
+        List[BasisInfo]
+            One wavelet basis per (scale, translation) combination.
+        """
         bases = []
         
         for scale in scales:

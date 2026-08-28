@@ -1,4 +1,4 @@
-"""函数求解器的工具函数。"""
+"""Utility functions for the functional solver."""
 
 from .numerical import NumericalUtils
 from .io import IOUtils

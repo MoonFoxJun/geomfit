@@ -1,42 +1,42 @@
-"""函数求解器的数值工具。"""
+"""Numerical utilities for the functional solver."""
 
 import numpy as np
 from typing import Callable, Dict, Any, Tuple, List
 from ..core.data_container import MultiDimData
 
 class NumericalUtils:
-    """用于积分、微分等的数值工具。"""
+    """Numerical utilities for integration, differentiation, interpolation, and quadrature."""
     
     @staticmethod
     def integrate_1d(f: Callable, a: float, b: float, n_points: int = 1000) -> float:
         """
-        使用辛普森法则对一维函数进行积分。
+        Integrate a 1-D function using Simpson's rule.
         
-        参数
+        Parameters
         ----------
         f : Callable
-            被积函数
+            Integrand.
         a : float
-            积分下限
+            Lower integration bound.
         b : float
-            积分上限
-        n_points : int, 默认=1000
-            积分使用的点数
+            Upper integration bound.
+        n_points : int, default=1000
+            Number of integration points.
             
-        返回
+        Returns
         -------
         float
-            积分的近似值
+            Approximation of the integral.
         """
         if n_points % 2 == 0:
-            n_points += 1  # 辛普森法则要求奇数个点
+            n_points += 1  # Simpson's rule requires an odd number of points
         
         x = np.linspace(a, b, n_points)
         y = f(x)
         
         h = (b - a) / (n_points - 1)
         
-        # 辛普森法则
+        # Simpson's rule: (h/3)(y_0 + y_n + 4*sum(odd) + 2*sum(even))
         integral = h / 3 * (y[0] + y[-1] + 4 * np.sum(y[1:-1:2]) + 2 * np.sum(y[2:-2:2]))
         return integral
     
@@ -44,67 +44,67 @@ class NumericalUtils:
     def integrate_nd(f: Callable, bounds: List[Tuple[float, float]], 
                     n_points_per_dim: int = 50) -> float:
         """
-        使用蒙特卡洛积分对 n 维函数进行积分。
+        Integrate an n-dimensional function by Monte Carlo sampling.
         
-        参数
+        Parameters
         ----------
         f : Callable
-            被积函数
+            Integrand.
         bounds : List[Tuple[float, float]]
-            每个维度的（下界，上界）列表
-        n_points_per_dim : int, 默认=50
-            每个维度的点数
+            (lower, upper) bound for each dimension.
+        n_points_per_dim : int, default=50
+            Number of samples per dimension.
             
-        返回
+        Returns
         -------
         float
-            积分的近似值
+            Approximation of the integral.
         """
         dim = len(bounds)
         n_samples = n_points_per_dim ** dim
         
-        if n_samples > 1e6:  # 限制总样本数
+        if n_samples > 1e6:  # Cap the total number of samples
             n_samples = 1000000
         
-        # 生成随机样本
+        # Draw uniform random samples per dimension
         samples = []
         for i in range(dim):
             a, b = bounds[i]
             samples.append(np.random.uniform(a, b, n_samples))
         
-        # 评估函数
+        # Evaluate the integrand
         points = np.column_stack(samples)
         values = np.apply_along_axis(f, 1, points)
         
-        # 计算体积
+        # Volume of the integration domain
         volume = 1.0
         for a, b in bounds:
             volume *= (b - a)
         
-        # 蒙特卡洛积分
+        # Monte Carlo estimate: volume * mean(f)
         integral = volume * np.mean(values)
         return integral
     
     @staticmethod
     def differentiate(f: Callable, x: float, h: float = 1e-5, method: str = "central") -> float:
         """
-        计算函数的数值导数。
+        Compute the numerical derivative of a function.
         
-        参数
+        Parameters
         ----------
         f : Callable
-            要求导的函数
+            Function to differentiate.
         x : float
-            计算导数的位置
-        h : float, 默认=1e-5
-            步长
-        method : str, 默认="central"
-            求导方法："forward"（前向）、"backward"（后向）或 "central"（中心）
+            Point at which the derivative is evaluated.
+        h : float, default=1e-5
+            Step size.
+        method : str, default="central"
+            Differentiation scheme: "forward", "backward", or "central".
             
-        返回
+        Returns
         -------
         float
-            导数的近似值
+            Approximation of the derivative.
         """
         if method == "forward":
             return (f(x + h) - f(x)) / h
@@ -118,21 +118,21 @@ class NumericalUtils:
     @staticmethod
     def gradient(f: Callable, x: np.ndarray, h: float = 1e-5) -> np.ndarray:
         """
-        计算多元函数的数值梯度。
+        Compute the numerical gradient of a multivariate function by central differences.
         
-        参数
+        Parameters
         ----------
         f : Callable
-            要求导的函数
+            Function to differentiate.
         x : np.ndarray
-            计算梯度的位置
-        h : float, 默认=1e-5
-            步长
+            Point at which the gradient is evaluated.
+        h : float, default=1e-5
+            Step size.
             
-        返回
+        Returns
         -------
         np.ndarray
-            梯度向量
+            Gradient vector.
         """
         n = len(x)
         grad = np.zeros(n)
@@ -149,21 +149,21 @@ class NumericalUtils:
     @staticmethod
     def hessian(f: Callable, x: np.ndarray, h: float = 1e-5) -> np.ndarray:
         """
-        计算多元函数的数值 Hessian 矩阵。
+        Compute the numerical Hessian matrix of a multivariate function.
         
-        参数
+        Parameters
         ----------
         f : Callable
-            要求导的函数
+            Function to differentiate.
         x : np.ndarray
-            计算 Hessian 矩阵的位置
-        h : float, 默认=1e-5
-            步长
+            Point at which the Hessian is evaluated.
+        h : float, default=1e-5
+            Step size.
             
-        返回
+        Returns
         -------
         np.ndarray
-            Hessian 矩阵
+            Hessian matrix.
         """
         n = len(x)
         hess = np.zeros((n, n))
@@ -171,14 +171,14 @@ class NumericalUtils:
         for i in range(n):
             for j in range(n):
                 if i == j:
-                    # 对角线元素：二阶导数
+                    # Diagonal entries: second derivative
                     x_plus = x.copy()
                     x_minus = x.copy()
                     x_plus[i] += h
                     x_minus[i] -= h
                     hess[i, i] = (f(x_plus) - 2 * f(x) + f(x_minus)) / (h ** 2)
                 else:
-                    # 非对角线元素：混合偏导数
+                    # Off-diagonal entries: mixed partial derivative
                     x_pp = x.copy()
                     x_pm = x.copy()
                     x_mp = x.copy()
@@ -204,23 +204,23 @@ class NumericalUtils:
     def interpolate_1d(x: np.ndarray, y: np.ndarray, x_new: np.ndarray, 
                       method: str = "linear") -> np.ndarray:
         """
-        对一维数据进行插值。
+        Interpolate 1-D data.
         
-        参数
+        Parameters
         ----------
         x : np.ndarray
-            原始 x 值
+            Original x values.
         y : np.ndarray
-            原始 y 值
+            Original y values.
         x_new : np.ndarray
-            用于插值的新 x 值
-        method : str, 默认="linear"
-            插值方法："linear"（线性）、"cubic"（三次）或 "nearest"（最近邻）
+            New x values at which to interpolate.
+        method : str, default="linear"
+            Interpolation method: "linear", "cubic", or "nearest".
             
-        返回
+        Returns
         -------
         np.ndarray
-            插值得到的 y 值
+            Interpolated y values.
         """
         from scipy import interpolate
         
@@ -239,23 +239,23 @@ class NumericalUtils:
     def interpolate_nd(points: np.ndarray, values: np.ndarray, 
                       new_points: np.ndarray, method: str = "linear") -> np.ndarray:
         """
-        对 n 维数据进行插值。
+        Interpolate n-dimensional data.
         
-        参数
+        Parameters
         ----------
         points : np.ndarray
-            原始点 (n_samples, n_dims)
+            Original points, shape (n_samples, n_dims).
         values : np.ndarray
-            原始值 (n_samples,)
+            Original values, shape (n_samples,).
         new_points : np.ndarray
-            用于插值的新点 (n_new, n_dims)
-        method : str, 默认="linear"
-            插值方法："linear"（线性）或 "nearest"（最近邻）
+            Points at which to interpolate, shape (n_new, n_dims).
+        method : str, default="linear"
+            Interpolation method: "linear" or "nearest".
             
-        返回
+        Returns
         -------
         np.ndarray
-            插值结果
+            Interpolated values.
         """
         from scipy.interpolate import griddata
         
@@ -264,34 +264,34 @@ class NumericalUtils:
     @staticmethod
     def compute_quadrature_points(n: int, method: str = "gauss-legendre") -> Tuple[np.ndarray, np.ndarray]:
         """
-        计算求积点和权重。
+        Compute quadrature nodes and weights on [0, 1].
         
-        参数
+        Parameters
         ----------
         n : int
-            求积点的数量
-        method : str, 默认="gauss-legendre"
-            求积方法："gauss-legendre"（高斯-勒让德）、"gauss-chebyshev"（高斯-切比雪夫）或 "trapezoidal"（梯形）
+            Number of quadrature nodes.
+        method : str, default="gauss-legendre"
+            Quadrature rule: "gauss-legendre", "gauss-chebyshev", or "trapezoidal".
             
-        返回
+        Returns
         -------
         Tuple[np.ndarray, np.ndarray]
-            求积点和权重
+            Quadrature nodes and weights.
         """
         if method == "gauss-legendre":
             from numpy.polynomial.legendre import leggauss
             points, weights = leggauss(n)
-            # 将区间从 [-1, 1] 变换到 [0, 1]
+            # Map the nodes from [-1, 1] to [0, 1]
             points = 0.5 * (points + 1)
             weights = 0.5 * weights
             return points, weights
         
         elif method == "gauss-chebyshev":
-            # 第一类切比雪夫节点
+            # Chebyshev nodes of the first kind
             k = np.arange(1, n + 1)
             points = np.cos((2 * k - 1) * np.pi / (2 * n))
             weights = np.pi / n * np.ones(n)
-            # 将区间从 [-1, 1] 变换到 [0, 1]
+            # Map the nodes from [-1, 1] to [0, 1]
             points = 0.5 * (points + 1)
             weights = 0.5 * weights
             return points, weights
@@ -309,32 +309,31 @@ class NumericalUtils:
     def compute_fourier_coefficients(f: Callable, L: float = 2*np.pi, 
                                     n_terms: int = 10) -> Tuple[np.ndarray, np.ndarray]:
         """
-        计算周期函数的傅里叶系数。
+        Compute the Fourier coefficients of a periodic function.
         
-        参数
+        Parameters
         ----------
         f : Callable
-            周期函数
-        L : float, 默认=2*pi
-            周期
-        n_terms : int, 默认=10
-            傅里叶项数
+            Periodic function.
+        L : float, default=2*pi
+            Period.
+        n_terms : int, default=10
+            Number of Fourier terms.
             
-        返回
+        Returns
         -------
         Tuple[np.ndarray, np.ndarray]
-            a_n（余弦）和 b_n（正弦）系数
+            a_n (cosine) and b_n (sine) coefficients.
         """
         a = np.zeros(n_terms + 1)
         b = np.zeros(n_terms)
         
-        # a0
+        # Constant term a0
         def integrand_a0(x):
             return f(x)
         
         a[0] = (1/L) * NumericalUtils.integrate_1d(integrand_a0, -L/2, L/2)
         
-        # 其余系数
         for n in range(1, n_terms + 1):
             def integrand_an(x):
                 return f(x) * np.cos(2 * np.pi * n * x / L)

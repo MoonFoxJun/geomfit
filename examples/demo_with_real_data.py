@@ -1,4 +1,4 @@
-"""实际数据示例（简化版）"""
+"""Real-world data demo (simplified)"""
 
 import sys
 import os
@@ -21,21 +21,21 @@ from functional_solver.inner_product.base import InnerProduct
 from functional_solver.solver.functional_solver import FunctionalSolver
 
 def demo_synthetic_regression():
-    """合成回归数据示例"""
+    """Synthetic regression data demo"""
     print("=" * 60)
-    print("合成回归数据示例")
+    print("Synthetic regression data demo")
     print("=" * 60)
     
-    # 生成合成回归数据
+    # Generate synthetic regression data
     n_samples = 100
     n_features = 3
     noise = 10.0
     
-    print(f"生成合成回归数据...")
+    print(f"Generating synthetic regression data...")
     X, y = make_regression(n_samples=n_samples, n_features=n_features, noise=noise, random_state=42)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 数据标准化
+    # Standardize the data
     scaler_X = StandardScaler()
     X_train_scaled = scaler_X.fit_transform(X_train)
     X_test_scaled = scaler_X.transform(X_test)
@@ -44,15 +44,15 @@ def demo_synthetic_regression():
     y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
     y_test_scaled = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
     
-    # 转换为MultiDimData格式
+    # Convert to MultiDimData format
     train_data_dict = {i: X_train_scaled[:, i] for i in range(n_features)}
     train_data = MultiDimData(train_data_dict)
     
     test_data_dict = {i: X_test_scaled[:, i] for i in range(n_features)}
     test_data = MultiDimData(test_data_dict)
     
-    # 方法1: 多项式基函数
-    print("\n方法1: 多项式基函数")
+    # Method 1: polynomial basis
+    print("\nMethod 1: Polynomial basis")
     basis_set_poly = BasisSet()
     for dim in range(n_features):
         basis_set_poly.add_basis(BasisFactory.polynomial(dim=dim, order=0))
@@ -69,18 +69,18 @@ def demo_synthetic_regression():
     y_train_pred_poly = solver_poly.predict(train_data)
     y_test_pred_poly = solver_poly.predict(test_data)
     
-    # 反标准化
+    # Inverse-transform predictions back to the original scale
     y_train_pred_poly_orig = scaler_y.inverse_transform(y_train_pred_poly.reshape(-1, 1)).flatten()
     y_test_pred_poly_orig = scaler_y.inverse_transform(y_test_pred_poly.reshape(-1, 1)).flatten()
     
     mse_train_poly = np.mean((y_train_pred_poly_orig - y_train)**2)
     mse_test_poly = np.mean((y_test_pred_poly_orig - y_test)**2)
     
-    print(f"  训练MSE: {mse_train_poly:.4f}")
-    print(f"  测试MSE: {mse_test_poly:.4f}")
+    print(f"  Train MSE: {mse_train_poly:.4f}")
+    print(f"  Test MSE: {mse_test_poly:.4f}")
     
-    # 方法2: RBF核函数
-    print("\n方法2: RBF核函数")
+    # Method 2: RBF kernel
+    print("\nMethod 2: RBF kernel")
     kernel_rbf = RBFKernel(sigma=1.0)
     solver_rbf = FunctionalSolver()
     solver_rbf.set_kernel(kernel_rbf)
@@ -96,53 +96,53 @@ def demo_synthetic_regression():
     mse_train_rbf = np.mean((y_train_pred_rbf_orig - y_train)**2)
     mse_test_rbf = np.mean((y_test_pred_rbf_orig - y_test)**2)
     
-    print(f"  训练MSE: {mse_train_rbf:.4f}")
-    print(f"  测试MSE: {mse_test_rbf:.4f}")
+    print(f"  Train MSE: {mse_train_rbf:.4f}")
+    print(f"  Test MSE: {mse_test_rbf:.4f}")
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. 测试集预测 vs 真实值（多项式基）
+    # 1. Test predictions vs true values (polynomial basis)
     ax1 = axes[0, 0]
     ax1.scatter(y_test, y_test_pred_poly_orig, alpha=0.6, s=30)
     ax1.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', linewidth=2, alpha=0.7)
-    ax1.set_xlabel('真实值')
-    ax1.set_ylabel('预测值')
-    ax1.set_title('多项式基函数 - 测试集')
+    ax1.set_xlabel('True value')
+    ax1.set_ylabel('Predicted value')
+    ax1.set_title('Polynomial basis - test set')
     ax1.grid(True, alpha=0.3)
     
-    # 2. 测试集预测 vs 真实值（RBF核）
+    # 2. Test predictions vs true values (RBF kernel)
     ax2 = axes[0, 1]
     ax2.scatter(y_test, y_test_pred_rbf_orig, alpha=0.6, s=30)
     ax2.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', linewidth=2, alpha=0.7)
-    ax2.set_xlabel('真实值')
-    ax2.set_ylabel('预测值')
-    ax2.set_title('RBF核函数 - 测试集')
+    ax2.set_xlabel('True value')
+    ax2.set_ylabel('Predicted value')
+    ax2.set_title('RBF kernel - test set')
     ax2.grid(True, alpha=0.3)
     
-    # 3. 误差比较
+    # 3. Error comparison
     ax3 = axes[1, 0]
-    methods = ['多项式基', 'RBF核']
+    methods = ['Polynomial basis', 'RBF kernel']
     test_mses = [mse_test_poly, mse_test_rbf]
     bars = ax3.bar(methods, test_mses, alpha=0.7, color=['blue', 'green'])
-    ax3.set_ylabel('测试集MSE')
-    ax3.set_title('不同方法的测试误差比较')
+    ax3.set_ylabel('Test MSE')
+    ax3.set_title('Test error by method')
     ax3.grid(True, alpha=0.3, axis='y')
     
     for bar, mse in zip(bars, test_mses):
         height = bar.get_height()
         ax3.text(bar.get_x() + bar.get_width()/2., height, f'{mse:.2f}', ha='center', va='bottom', fontsize=10)
     
-    # 4. 残差分布
+    # 4. Residual distribution
     ax4 = axes[1, 1]
     residuals_poly = y_test - y_test_pred_poly_orig
     residuals_rbf = y_test - y_test_pred_rbf_orig
-    ax4.hist(residuals_poly, bins=20, alpha=0.5, color='blue', label='多项式基', edgecolor='black')
-    ax4.hist(residuals_rbf, bins=20, alpha=0.5, color='green', label='RBF核', edgecolor='black')
+    ax4.hist(residuals_poly, bins=20, alpha=0.5, color='blue', label='Polynomial basis', edgecolor='black')
+    ax4.hist(residuals_rbf, bins=20, alpha=0.5, color='green', label='RBF kernel', edgecolor='black')
     ax4.axvline(x=0, color='r', linestyle='--', linewidth=2, alpha=0.7)
-    ax4.set_xlabel('残差')
-    ax4.set_ylabel('频数')
-    ax4.set_title('残差分布比较')
+    ax4.set_xlabel('Residual')
+    ax4.set_ylabel('Frequency')
+    ax4.set_title('Residual distribution comparison')
     ax4.legend()
     ax4.grid(True, alpha=0.3)
     
@@ -150,24 +150,24 @@ def demo_synthetic_regression():
     plt.savefig(os.path.join(OUTPUT_DIR, 'demo_synthetic_regression.png'), dpi=150, bbox_inches='tight')
     plt.show()
     
-    return {'多项式基': mse_test_poly, 'RBF核': mse_test_rbf}
+    return {'Polynomial basis': mse_test_poly, 'RBF kernel': mse_test_rbf}
 
 def demo_friedman_dataset():
-    """Friedman数据集示例"""
+    """Friedman dataset demo"""
     print("\n" + "=" * 60)
-    print("Friedman数据集示例")
+    print("Friedman dataset demo")
     print("=" * 60)
     
-    # 生成Friedman #1数据集
+    # Generate the Friedman #1 dataset
     n_samples = 200
     n_features = 10
     noise = 1.0
     
-    print(f"生成Friedman #1数据集...")
+    print(f"Generating Friedman #1 dataset...")
     X, y = make_friedman1(n_samples=n_samples, n_features=n_features, noise=noise, random_state=42)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 数据标准化
+    # Standardize the data
     scaler_X = StandardScaler()
     X_train_scaled = scaler_X.fit_transform(X_train)
     X_test_scaled = scaler_X.transform(X_test)
@@ -176,15 +176,15 @@ def demo_friedman_dataset():
     y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
     y_test_scaled = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
     
-    # 转换为MultiDimData格式
+    # Convert to MultiDimData format
     train_data_dict = {i: X_train_scaled[:, i] for i in range(n_features)}
     train_data = MultiDimData(train_data_dict)
     
     test_data_dict = {i: X_test_scaled[:, i] for i in range(n_features)}
     test_data = MultiDimData(test_data_dict)
     
-    # 方法1: 多项式基函数
-    print("\n方法1: 多项式基函数")
+    # Method 1: polynomial basis
+    print("\nMethod 1: Polynomial basis")
     basis_set_poly = BasisSet()
     for dim in range(n_features):
         basis_set_poly.add_basis(BasisFactory.polynomial(dim=dim, order=0))
@@ -206,11 +206,11 @@ def demo_friedman_dataset():
     mse_train_poly = np.mean((y_train_pred_poly_orig - y_train)**2)
     mse_test_poly = np.mean((y_test_pred_poly_orig - y_test)**2)
     
-    print(f"  训练MSE: {mse_train_poly:.4f}")
-    print(f"  测试MSE: {mse_test_poly:.4f}")
+    print(f"  Train MSE: {mse_train_poly:.4f}")
+    print(f"  Test MSE: {mse_test_poly:.4f}")
     
-    # 方法2: RBF核函数
-    print("\n方法2: RBF核函数")
+    # Method 2: RBF kernel
+    print("\nMethod 2: RBF kernel")
     kernel_rbf = RBFKernel(sigma=1.0)
     solver_rbf = FunctionalSolver()
     solver_rbf.set_kernel(kernel_rbf)
@@ -226,37 +226,37 @@ def demo_friedman_dataset():
     mse_train_rbf = np.mean((y_train_pred_rbf_orig - y_train)**2)
     mse_test_rbf = np.mean((y_test_pred_rbf_orig - y_test)**2)
     
-    print(f"  训练MSE: {mse_train_rbf:.4f}")
-    print(f"  测试MSE: {mse_test_rbf:.4f}")
+    print(f"  Train MSE: {mse_train_rbf:.4f}")
+    print(f"  Test MSE: {mse_test_rbf:.4f}")
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. 测试集预测 vs 真实值
+    # 1. Test predictions vs true values
     ax1 = axes[0, 0]
-    ax1.scatter(y_test, y_test_pred_poly_orig, alpha=0.6, s=30, label='多项式基')
-    ax1.scatter(y_test, y_test_pred_rbf_orig, alpha=0.6, s=30, label='RBF核')
+    ax1.scatter(y_test, y_test_pred_poly_orig, alpha=0.6, s=30, label='Polynomial basis')
+    ax1.scatter(y_test, y_test_pred_rbf_orig, alpha=0.6, s=30, label='RBF kernel')
     ax1.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', linewidth=2, alpha=0.7)
-    ax1.set_xlabel('真实值')
-    ax1.set_ylabel('预测值')
-    ax1.set_title('Friedman数据集 - 测试集预测')
+    ax1.set_xlabel('True value')
+    ax1.set_ylabel('Predicted value')
+    ax1.set_title('Friedman dataset - test set predictions')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. 误差比较
+    # 2. Error comparison
     ax2 = axes[0, 1]
-    methods = ['多项式基', 'RBF核']
+    methods = ['Polynomial basis', 'RBF kernel']
     test_mses = [mse_test_poly, mse_test_rbf]
     bars = ax2.bar(methods, test_mses, alpha=0.7, color=['blue', 'green'])
-    ax2.set_ylabel('测试集MSE')
-    ax2.set_title('Friedman数据集 - 误差比较')
+    ax2.set_ylabel('Test MSE')
+    ax2.set_title('Friedman dataset - error comparison')
     ax2.grid(True, alpha=0.3, axis='y')
     
     for bar, mse in zip(bars, test_mses):
         height = bar.get_height()
         ax2.text(bar.get_x() + bar.get_width()/2., height, f'{mse:.2f}', ha='center', va='bottom', fontsize=10)
     
-    # 3. 特征重要性
+    # 3. Feature importance
     ax3 = axes[1, 0]
     first_order_coeffs = []
     for i, basis in enumerate(basis_set_poly.bases):
@@ -267,13 +267,13 @@ def demo_friedman_dataset():
     first_order_coeffs = first_order_coeffs[:10]
     
     ax3.bar(feature_names, first_order_coeffs, alpha=0.7, color='steelblue')
-    ax3.set_xlabel('特征')
-    ax3.set_ylabel('系数绝对值')
-    ax3.set_title('多项式基函数特征重要性')
+    ax3.set_xlabel('Feature')
+    ax3.set_ylabel('|Coefficient|')
+    ax3.set_title('Polynomial basis feature importance')
     ax3.set_xticklabels(feature_names, rotation=45, ha='right')
     ax3.grid(True, alpha=0.3, axis='y')
     
-    # 4. 不同sigma值的RBF核性能
+    # 4. RBF kernel performance vs sigma
     ax4 = axes[1, 1]
     sigma_values = np.logspace(-1, 1, 10)
     test_mses_sigma = []
@@ -290,40 +290,40 @@ def demo_friedman_dataset():
         test_mses_sigma.append(np.mean((y_test_pred_temp_orig - y_test)**2))
     
     ax4.semilogx(sigma_values, test_mses_sigma, 'ro-', linewidth=2, markersize=6)
-    ax4.set_xlabel('RBF核参数 sigma')
-    ax4.set_ylabel('测试集MSE')
-    ax4.set_title('RBF核参数调优')
+    ax4.set_xlabel('RBF kernel parameter sigma')
+    ax4.set_ylabel('Test MSE')
+    ax4.set_title('RBF kernel parameter tuning')
     ax4.grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.savefig(os.path.join(OUTPUT_DIR, 'demo_friedman_dataset.png'), dpi=150, bbox_inches='tight')
     plt.show()
     
-    return {'多项式基': mse_test_poly, 'RBF核': mse_test_rbf}
+    return {'Polynomial basis': mse_test_poly, 'RBF kernel': mse_test_rbf}
 
 def demo_diabetes_dataset():
-    """糖尿病数据集示例"""
+    """Diabetes dataset demo"""
     print("\n" + "=" * 60)
-    print("糖尿病数据集示例")
+    print("Diabetes dataset demo")
     print("=" * 60)
     
-    # 加载糖尿病数据集
+    # Load the diabetes dataset
     diabetes = load_diabetes()
     X = diabetes.data
     y = diabetes.target
     
-    print(f"加载糖尿病数据集...")
+    print(f"Loading diabetes dataset...")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 转换为MultiDimData格式
+    # Convert to MultiDimData format
     train_data_dict = {i: X_train[:, i] for i in range(X.shape[1])}
     train_data = MultiDimData(train_data_dict)
     
     test_data_dict = {i: X_test[:, i] for i in range(X.shape[1])}
     test_data = MultiDimData(test_data_dict)
     
-    # 方法1: 线性基函数
-    print("\n方法1: 线性基函数")
+    # Method 1: linear basis
+    print("\nMethod 1: Linear basis")
     basis_set_linear = BasisSet()
     for dim in range(X.shape[1]):
         basis_set_linear.add_basis(BasisFactory.polynomial(dim=dim, order=0))
@@ -342,11 +342,11 @@ def demo_diabetes_dataset():
     mse_train_linear = np.mean((y_train_pred_linear - y_train)**2)
     mse_test_linear = np.mean((y_test_pred_linear - y_test)**2)
     
-    print(f"  训练MSE: {mse_train_linear:.4f}")
-    print(f"  测试MSE: {mse_test_linear:.4f}")
+    print(f"  Train MSE: {mse_train_linear:.4f}")
+    print(f"  Test MSE: {mse_test_linear:.4f}")
     
-    # 方法2: RBF核函数
-    print("\n方法2: RBF核函数")
+    # Method 2: RBF kernel
+    print("\nMethod 2: RBF kernel")
     kernel_rbf = RBFKernel(sigma=0.5)
     solver_rbf = FunctionalSolver()
     solver_rbf.set_kernel(kernel_rbf)
@@ -359,55 +359,55 @@ def demo_diabetes_dataset():
     mse_train_rbf = np.mean((y_train_pred_rbf - y_train)**2)
     mse_test_rbf = np.mean((y_test_pred_rbf - y_test)**2)
     
-    print(f"  训练MSE: {mse_train_rbf:.4f}")
-    print(f"  测试MSE: {mse_test_rbf:.4f}")
+    print(f"  Train MSE: {mse_train_rbf:.4f}")
+    print(f"  Test MSE: {mse_test_rbf:.4f}")
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 1. 测试集预测 vs 真实值
+    # 1. Test predictions vs true values
     ax1 = axes[0, 0]
-    ax1.scatter(y_test, y_test_pred_linear, alpha=0.6, s=30, label='线性基')
-    ax1.scatter(y_test, y_test_pred_rbf, alpha=0.6, s=30, label='RBF核')
+    ax1.scatter(y_test, y_test_pred_linear, alpha=0.6, s=30, label='Linear basis')
+    ax1.scatter(y_test, y_test_pred_rbf, alpha=0.6, s=30, label='RBF kernel')
     ax1.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', linewidth=2, alpha=0.7)
-    ax1.set_xlabel('真实值')
-    ax1.set_ylabel('预测值')
-    ax1.set_title('糖尿病数据集 - 测试集预测')
+    ax1.set_xlabel('True value')
+    ax1.set_ylabel('Predicted value')
+    ax1.set_title('Diabetes dataset - test set predictions')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. 误差比较
+    # 2. Error comparison
     ax2 = axes[0, 1]
-    methods = ['线性基', 'RBF核']
+    methods = ['Linear basis', 'RBF kernel']
     test_mses = [mse_test_linear, mse_test_rbf]
     bars = ax2.bar(methods, test_mses, alpha=0.7, color=['blue', 'green'])
-    ax2.set_ylabel('测试集MSE')
-    ax2.set_title('糖尿病数据集 - 误差比较')
+    ax2.set_ylabel('Test MSE')
+    ax2.set_title('Diabetes dataset - error comparison')
     ax2.grid(True, alpha=0.3, axis='y')
     
     for bar, mse in zip(bars, test_mses):
         height = bar.get_height()
         ax2.text(bar.get_x() + bar.get_width()/2., height, f'{mse:.1f}', ha='center', va='bottom', fontsize=10)
     
-    # 3. 系数分布
+    # 3. Coefficient distribution
     ax3 = axes[1, 0]
     indices = np.arange(len(coeff_linear))
     ax3.bar(indices, coeff_linear, alpha=0.7, color='steelblue')
-    ax3.set_xlabel('基函数索引')
-    ax3.set_ylabel('系数值')
-    ax3.set_title('线性基函数系数分布')
+    ax3.set_xlabel('Basis index')
+    ax3.set_ylabel('Coefficient')
+    ax3.set_title('Linear basis coefficients')
     ax3.grid(True, alpha=0.3, axis='y')
     
-    # 4. 残差分布
+    # 4. Residual distribution
     ax4 = axes[1, 1]
     residuals_linear = y_test - y_test_pred_linear
     residuals_rbf = y_test - y_test_pred_rbf
-    ax4.hist(residuals_linear, bins=20, alpha=0.5, color='blue', label='线性基', edgecolor='black')
-    ax4.hist(residuals_rbf, bins=20, alpha=0.5, color='green', label='RBF核', edgecolor='black')
+    ax4.hist(residuals_linear, bins=20, alpha=0.5, color='blue', label='Linear basis', edgecolor='black')
+    ax4.hist(residuals_rbf, bins=20, alpha=0.5, color='green', label='RBF kernel', edgecolor='black')
     ax4.axvline(x=0, color='r', linestyle='--', linewidth=2, alpha=0.7)
-    ax4.set_xlabel('残差')
-    ax4.set_ylabel('频数')
-    ax4.set_title('残差分布比较')
+    ax4.set_xlabel('Residual')
+    ax4.set_ylabel('Frequency')
+    ax4.set_title('Residual distribution comparison')
     ax4.legend()
     ax4.grid(True, alpha=0.3)
     
@@ -415,35 +415,35 @@ def demo_diabetes_dataset():
     plt.savefig(os.path.join(OUTPUT_DIR, 'demo_diabetes_dataset.png'), dpi=150, bbox_inches='tight')
     plt.show()
     
-    return {'线性基': mse_test_linear, 'RBF核': mse_test_rbf}
+    return {'Linear basis': mse_test_linear, 'RBF kernel': mse_test_rbf}
 
 if __name__ == "__main__":
-    print("实际数据示例")
+    print("Real-World Data Demo")
     print("=" * 60)
     
-    # 运行所有示例
+    # Run all demos
     results_summary = {}
     
-    # 1. 合成回归数据
-    print("\n1. 合成回归数据示例")
+    # 1. Synthetic regression data
+    print("\n1. Synthetic regression demo")
     results_synth = demo_synthetic_regression()
     results_summary.update(results_synth)
     
-    # 2. Friedman数据集
-    print("\n2. Friedman数据集示例")
+    # 2. Friedman dataset
+    print("\n2. Friedman dataset demo")
     results_friedman = demo_friedman_dataset()
     results_summary.update(results_friedman)
     
-    # 3. 糖尿病数据集
-    print("\n3. 糖尿病数据集示例")
+    # 3. Diabetes dataset
+    print("\n3. Diabetes dataset demo")
     results_diabetes = demo_diabetes_dataset()
     results_summary.update(results_diabetes)
     
-    # 打印结果总结
+    # Print summary
     print("\n" + "=" * 60)
-    print("结果总结")
+    print("Results summary")
     print("=" * 60)
     for method, mse in sorted(results_summary.items(), key=lambda x: x[1]):
-        print(f"{method:10}: 测试MSE = {mse:.4f}")
+        print(f"{method:10}: test MSE = {mse:.4f}")
     
-    print("\n示例完成！")
+    print("\nDemo complete!")

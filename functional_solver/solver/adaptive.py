@@ -1,4 +1,4 @@
-"""用于函数逼近的自适应基选择。"""
+"""Adaptive basis selection for functional approximation."""
 
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
@@ -7,16 +7,16 @@ from ..core.basis_container import BasisSet, BasisInfo
 from ..inner_product.base import InnerProduct
 
 class AdaptiveSolver:
-    """自适应基选择求解器。"""
+    """Solver performing greedy adaptive selection over basis candidates."""
     
     def __init__(self, inner_product: InnerProduct):
         """
-        初始化自适应求解器。
+        Initialize the adaptive solver.
         
-        参数
+        Parameters
         ----------
         inner_product : InnerProduct
-            内积定义
+            Inner-product definition.
         """
         self.inner_product = inner_product
         self.data = None
@@ -27,36 +27,41 @@ class AdaptiveSolver:
         self.residuals = None
     
     def load_data(self, data: MultiDimData, target: np.ndarray):
-        """加载用于求解的数据。"""
+        """Load the data used for solving."""
         self.data = data
         self.target = target
         assert data.n_points == len(target), "Number of data points must match target values"
         self.residuals = target.copy()
     
     def add_basis_candidate(self, basis_info: BasisInfo):
-        """添加一个基函数候选。"""
+        """Add a single basis-function candidate."""
         self.basis_set.add_basis(basis_info)
     
     def add_basis_candidates(self, basis_list: List[BasisInfo]):
-        """添加多个基函数候选。"""
+        """Add multiple basis-function candidates."""
         for basis in basis_list:
             self.basis_set.add_basis(basis)
     
     def forward_selection(self, max_basis: int = 10, tol: float = 1e-6) -> List[int]:
         """
-        执行前向基选择。
+        Perform greedy forward selection over the basis candidates.
         
-        参数
+        At each step, the candidate whose basis values correlate most strongly
+        with the current residual is added, and the coefficients are then
+        refit by least squares on the selected subset.
+        
+        Parameters
         ----------
-        max_basis : int, 默认=10
-            最多选择的基函数数量
-        tol : float, 默认=1e-6
-            残差范数的容差
+        max_basis : int, default=10
+            Maximum number of basis functions to select.
+        tol : float, default=1e-6
+            Tolerance on the residual correlation; selection stops when the best
+            correlation falls below it.
             
-        返回
+        Returns
         -------
         List[int]
-            被选中的基函数索引
+            Indices of the selected basis functions.
         """
         n_candidates = len(self.basis_set)
         self.selected_indices = []
@@ -66,12 +71,12 @@ class AdaptiveSolver:
             best_index = -1
             best_reduction = -1
             
-            # 评估所有候选基函数
+            # Evaluate all candidate basis functions
             for i in range(n_candidates):
                 if i in self.selected_indices:
                     continue
                 
-                # 获取基函数值
+                # Basis values at all data points
                 basis = self.basis_set.bases[i]
                 basis_values = np.zeros(self.data.n_points)
                 
@@ -79,7 +84,7 @@ class AdaptiveSolver:
                     point = self.data.get_point(j)
                     basis_values[j] = basis.evaluate(point)
                 
-                # 计算与残差的相关性
+                # Correlation of the candidate with the residual
                 correlation = np.abs(np.dot(self.residuals, basis_values))
                 
                 if correlation > best_reduction:
@@ -89,29 +94,32 @@ class AdaptiveSolver:
             if best_index == -1 or best_reduction < tol:
                 break
             
-            # 添加选中的基
             self.selected_indices.append(best_index)
             
-            # 更新解和残差
+            # Refit the least-squares solution on the selected subset
             self._update_solution()
         
         return self.selected_indices
     
     def orthogonal_matching_pursuit(self, max_basis: int = 10, tol: float = 1e-6) -> List[int]:
         """
-        执行正交匹配追踪（OMP）。
+        Perform orthogonal matching pursuit (OMP) over the basis candidates.
         
-        参数
+        Unlike forward selection, each candidate is orthogonalized against the
+        span of the already selected basis before its correlation with the
+        residual is measured.
+        
+        Parameters
         ----------
-        max_basis : int, 默认=10
-            最多选择的基函数数量
-        tol : float, 默认=1e-6
-            残差范数的容差
+        max_basis : int, default=10
+            Maximum number of basis functions to select.
+        tol : float, default=1e-6
+            Tolerance on the residual correlation and the residual norm.
             
-        返回
+        Returns
         -------
         List[int]
-            被选中的基函数索引
+            Indices of the selected basis functions.
         """
         n_candidates = len(self.basis_set)
         self.selected_indices = []
@@ -121,12 +129,12 @@ class AdaptiveSolver:
             best_index = -1
             best_reduction = -1
             
-            # 评估所有候选基函数
+            # Evaluate all candidate basis functions
             for i in range(n_candidates):
                 if i in self.selected_indices:
                     continue
                 
-                # 获取基函数值
+                # Basis values at all data points
                 basis = self.basis_set.bases[i]
                 basis_values = np.zeros(self.data.n_points)
                 
@@ -134,9 +142,9 @@ class AdaptiveSolver:
                     point = self.data.get_point(j)
                     basis_values[j] = basis.evaluate(point)
                 
-                # 与已选基进行正交化
+                # Orthogonalize the candidate against the selected basis
                 if self.selected_indices:
-                    # 获取已选基矩阵
+                    # Matrix of selected basis values
                     selected_bases = [self.basis_set.bases[idx] for idx in self.selected_indices]
                     Phi_selected = np.zeros((self.data.n_points, len(selected_bases)))
                     
@@ -145,13 +153,13 @@ class AdaptiveSolver:
                             point = self.data.get_point(j)
                             Phi_selected[j, k] = basis_k.evaluate(point)
                     
-                    # 使用 QR 分解进行正交化
+                    # Orthogonalize via the QR decomposition of the selected basis
                     Q, _ = np.linalg.qr(Phi_selected)
                     basis_values_orth = basis_values - Q @ (Q.T @ basis_values)
                 else:
                     basis_values_orth = basis_values
                 
-                # 计算与残差的相关性
+                # Correlation of the orthogonalized candidate with the residual
                 correlation = np.abs(np.dot(self.residuals, basis_values_orth))
                 
                 if correlation > best_reduction:
@@ -161,13 +169,12 @@ class AdaptiveSolver:
             if best_index == -1 or best_reduction < tol:
                 break
             
-            # 添加选中的基
             self.selected_indices.append(best_index)
             
-            # 使用所有已选基更新解
+            # Update the solution using all selected basis functions
             self._update_solution_omp()
             
-            # 检查残差范数
+            # Stop when the residual norm drops below the tolerance
             residual_norm = np.linalg.norm(self.residuals)
             if residual_norm < tol:
                 break
@@ -175,12 +182,12 @@ class AdaptiveSolver:
         return self.selected_indices
     
     def _update_solution(self):
-        """使用已选基更新解。"""
+        """Update the least-squares solution on the selected basis functions."""
         if not self.selected_indices:
             self.coefficients = np.array([])
             return
         
-        # 获取已选基矩阵
+        # Matrix of selected basis values
         selected_bases = [self.basis_set.bases[idx] for idx in self.selected_indices]
         Phi = np.zeros((self.data.n_points, len(selected_bases)))
         
@@ -189,23 +196,23 @@ class AdaptiveSolver:
                 point = self.data.get_point(j)
                 Phi[j, k] = basis.evaluate(point)
         
-        # 求解最小二乘问题
+        # Least-squares solve
         try:
             self.coefficients = np.linalg.lstsq(Phi, self.target, rcond=None)[0]
         except np.linalg.LinAlgError:
-            # 回退方案：使用伪逆
+            # Fallback: pseudoinverse
             self.coefficients = np.linalg.pinv(Phi) @ self.target
         
-        # 更新残差
+        # Residual update
         self.residuals = self.target - Phi @ self.coefficients
     
     def _update_solution_omp(self):
-        """使用正交投影更新 OMP 的解。"""
+        """Update the OMP solution via orthogonal projection onto the selected basis."""
         if not self.selected_indices:
             self.coefficients = np.array([])
             return
         
-        # 获取已选基矩阵
+        # Matrix of selected basis values
         selected_bases = [self.basis_set.bases[idx] for idx in self.selected_indices]
         Phi = np.zeros((self.data.n_points, len(selected_bases)))
         
@@ -214,29 +221,29 @@ class AdaptiveSolver:
                 point = self.data.get_point(j)
                 Phi[j, k] = basis.evaluate(point)
         
-        # 使用 QR 分解进行正交投影
+        # Orthogonal projection via the QR decomposition
         Q, R = np.linalg.qr(Phi)
         
-        # 求解三角方程组
+        # Solve the triangular system R c = Q^T y
         y = Q.T @ self.target
         self.coefficients = np.linalg.solve(R, y)
         
-        # 更新残差
+        # Residual after projection onto span(Q)
         self.residuals = self.target - Q @ (Q.T @ self.target)
     
     def get_selected_basis_set(self) -> BasisSet:
-        """获取只包含已选基函数的基集合。"""
+        """Return a BasisSet containing only the selected basis functions."""
         selected_set = BasisSet()
         for idx in self.selected_indices:
             selected_set.add_basis(self.basis_set.bases[idx])
         return selected_set
     
     def predict(self, new_data: MultiDimData) -> np.ndarray:
-        """预测新数据的值。"""
+        """Predict values for new data."""
         if self.coefficients is None:
             raise ValueError("Must perform basis selection first")
         
-        # 获取新数据对应的已选基矩阵
+        # Selected-basis matrix evaluated at the new data
         selected_bases = [self.basis_set.bases[idx] for idx in self.selected_indices]
         Phi_new = np.zeros((new_data.n_points, len(selected_bases)))
         
@@ -248,13 +255,13 @@ class AdaptiveSolver:
         return Phi_new @ self.coefficients
     
     def get_residual_norm(self) -> float:
-        """获取残差的范数。"""
+        """Return the L2 norm of the current residuals."""
         if self.residuals is None:
             return 0.0
         return np.linalg.norm(self.residuals)
     
     def get_explained_variance(self) -> float:
-        """获取解释方差的占比。"""
+        """Return the fraction of target variance explained by the selection."""
         if self.target is None:
             return 0.0
         
@@ -267,19 +274,24 @@ class AdaptiveSolver:
     
     def cross_validate_selection(self, n_folds: int = 5, max_basis: int = 10) -> Tuple[List[int], float]:
         """
-        执行交叉验证的基选择。
+        Perform k-fold cross-validated forward selection.
         
-        参数
+        On each fold, forward selection is run on the training split and
+        evaluated on the held-out split; the final selection is then made on
+        the full data.
+        
+        Parameters
         ----------
-        n_folds : int, 默认=5
-            交叉验证的折数
-        max_basis : int, 默认=10
-            最大基函数数量
+        n_folds : int, default=5
+            Number of cross-validation folds.
+        max_basis : int, default=10
+            Maximum number of basis functions.
             
-        返回
+        Returns
         -------
         Tuple[List[int], float]
-            选中的索引和交叉验证得分
+            Indices of the selected basis functions and the mean
+            cross-validation score (mean squared error).
         """
         n_points = self.data.n_points
         indices = np.arange(n_points)
@@ -289,14 +301,14 @@ class AdaptiveSolver:
         cv_scores = []
         
         for fold in range(n_folds):
-            # 划分数据
+            # Split into train and test folds
             test_start = fold * fold_size
             test_end = (fold + 1) * fold_size if fold < n_folds - 1 else n_points
             
             test_indices = indices[test_start:test_end]
             train_indices = np.setdiff1d(indices, test_indices)
             
-            # 创建训练数据
+            # Build the training fold
             train_data_dict = {}
             for dim in self.data.dims:
                 train_data_dict[dim] = self.data.get_dim(dim)[train_indices]
@@ -304,7 +316,7 @@ class AdaptiveSolver:
             train_data = MultiDimData(train_data_dict)
             train_target = self.target[train_indices]
             
-            # 创建测试数据
+            # Build the test fold
             test_data_dict = {}
             for dim in self.data.dims:
                 test_data_dict[dim] = self.data.get_dim(dim)[test_indices]
@@ -312,23 +324,23 @@ class AdaptiveSolver:
             test_data = MultiDimData(test_data_dict)
             test_target = self.target[test_indices]
             
-            # 在训练数据上训练自适应求解器
+            # Fit an adaptive solver on the training fold
             train_solver = AdaptiveSolver(self.inner_product)
             train_solver.load_data(train_data, train_target)
             
-            # 添加相同的基候选
+            # Register the same basis candidates
             for basis in self.basis_set.bases:
                 train_solver.add_basis_candidate(basis)
             
-            # 执行选择
+            # Run forward selection
             train_solver.forward_selection(max_basis=max_basis)
             
-            # 在测试数据上评估
+            # Evaluate on the held-out fold
             predictions = train_solver.predict(test_data)
             test_error = np.mean((predictions - test_target) ** 2)
             cv_scores.append(test_error)
         
-        # 在完整数据上执行最终选择
+        # Final selection on the full data
         self.forward_selection(max_basis=max_basis)
         
         return self.selected_indices, np.mean(cv_scores)

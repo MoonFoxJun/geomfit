@@ -1,19 +1,23 @@
-"""注意力 = 核机器 的最小演示。
+"""Attention as a kernel machine: a minimal demonstration.
 
-三个要点（详见 docs/kernel_convolution_attention.md）：
+Three points (see docs/kernel_convolution_attention.md for details):
 
-1. 【精确恒等式】自注意力的相似度矩阵 QKᵀ（取 W_q = W_k = I）就是本库
-   PolynomialKernel(1).compute_matrix() 算出来的核矩阵：
+1. [Exact identity] The self-attention similarity matrix QKᵀ (with W_q = W_k = I)
+   is exactly the kernel matrix computed by PolynomialKernel(1).compute_matrix():
        max|QKᵀ − K| = 0.0
-   注意力 = softmax(核矩阵) × 值向量  →  核平滑。
+   Attention = softmax(kernel matrix) × value vectors  ->  kernel smoothing.
 
-2. 【同一台机器，两种估计器】
-   - KernelSolver：解方程 (K+αI)α = y（核岭回归，可插值/过拟合、带外按核衰减）；
-   - 固定注意力：逐行 softmax 归一化（凸组合，输出必有界、不外推）。
-   两者都是"预测 = Σ w_j(x*) y_j"，只是权重 w 的算法不同。
+2. [One machine, two estimators]
+   - KernelSolver: solves (K + αI)α = y (kernel ridge regression; can interpolate
+     or overfit, and decays by the kernel outside the data range);
+   - Fixed attention: row-wise softmax normalization (a convex combination;
+     the output is bounded and does not extrapolate).
+   Both compute "prediction = Σ w_j(x*) y_j"; they differ only in how the
+   weights w are obtained.
 
-3. 【注意力的"内容自适应"来自哪里】当 W_q、W_k 可学习时，核不再固定——
-   权重由全部输入共同决定，这就是它比固定卷积核"自由"的地方。
+3. [Where "content-adaptivity" comes from] When W_q and W_k are learnable, the
+   kernel is no longer fixed — the weights are determined by all inputs jointly.
+   This is what makes attention more flexible than a fixed convolution kernel.
 """
 
 import sys
@@ -38,53 +42,54 @@ def main():
     y = y_true + 0.05 * rng.standard_normal(n)
     data = MultiDimData({0: x})
 
-    # ---------- 1. 精确恒等式：QKᵀ = 核矩阵 ----------
+    # ---------- 1. exact identity: QKᵀ = kernel matrix ----------
     K = PolynomialKernel(degree=1, coef0=0.0, gamma=1.0).compute_matrix(data)
-    QK = x[:, None] @ x[None, :]              # 取 W_q = W_k = I
+    QK = x[:, None] @ x[None, :]              # here W_q = W_k = I
     print("=" * 64)
-    print("1) 精确恒等式：注意力相似度矩阵 == 库的核矩阵")
+    print("1) Exact identity: attention similarity matrix == library kernel matrix")
     print(f"   max|QKᵀ - PolynomialKernel(1).compute_matrix()| = "
           f"{np.max(np.abs(QK - K)):.2e}")
-    print("   → 注意力 softmax(QKᵀ/√d)·V 就是  softmax(核矩阵)·V 的核平滑。")
+    print("   → attention softmax(QKᵀ/√d)·V is kernel smoothing softmax(kernel matrix)·V.")
 
-    # ---------- 2. 同一台机器，两种估计器 ----------
+    # ---------- 2. one machine, two estimators ----------
     ell, alpha = 0.12, 0.05
     x_grid = np.linspace(-0.25, 1.25, 400)
 
-    # 2a) KernelSolver：核岭回归 (K+αI)α = y
+    # 2a) KernelSolver: kernel ridge regression (K+αI)α = y
     s = FunctionalSolver()
     s.set_kernel(RBFKernel(sigma=1.0, length_scale=ell))
     s.load_data(data, y)
     s.solve(regularization={"alpha": alpha})
     f_ridge = s.predict(MultiDimData({0: x_grid}))
 
-    # 2b) 固定注意力：softmax 归一化的核平滑（Nadaraya-Watson）
+    # 2b) Fixed attention: softmax-normalized kernel smoothing (Nadaraya-Watson)
     d2 = (x_grid[:, None] - x[None, :]) ** 2
     A = np.exp(-d2 / (2 * ell ** 2))
-    A = A / A.sum(axis=1, keepdims=True)      # 逐行 softmax
+    A = A / A.sum(axis=1, keepdims=True)      # row-wise softmax
     f_attn = A @ y
 
     in_range = (x_grid >= 0) & (x_grid <= 1)
     print("-" * 64)
-    print("2) 同一台核机器，两种估计器（RBF 核, ℓ=0.12）")
-    print(f"   带内最大差异 = {np.max(np.abs(f_ridge[in_range] - f_attn[in_range])):.3f}")
-    print(f"   带外行为不同：核岭回归在 x→1.25 处 → {f_ridge[-1]:+.3f}，")
-    print(f"                  softmax 注意力 → {f_attn[-1]:+.3f}（有界，不外推）")
-    print("   岭回归解方程、可过拟合；softmax 是凸组合、必有界——")
-    print("   这正是 α 与 softmax 归一化这两个'旋钮'的差别。")
+    print("2) One kernel machine, two estimators (RBF kernel, ℓ=0.12)")
+    print(f"   Max in-range difference = {np.max(np.abs(f_ridge[in_range] - f_attn[in_range])):.3f}")
+    print(f"   Out-of-range behavior differs: kernel ridge at x→1.25 → {f_ridge[-1]:+.3f},")
+    print(f"                  softmax attention → {f_attn[-1]:+.3f} (bounded, no extrapolation)")
+    print("   Ridge regression solves a linear system and can overfit; softmax is a convex")
+    print("   combination and is bounded — that is the difference between the two 'knobs',")
+    print("   α and softmax normalization.")
 
-    # ---------- 绘图 ----------
+    # ---------- plot ----------
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(x, y, s=20, alpha=0.6, label='数据')
-    ax.plot(x_grid, np.sin(2 * np.pi * x_grid), 'g-', lw=1.5, alpha=0.6, label='真实函数')
-    ax.plot(x_grid, f_ridge, 'b-', lw=2, label='KernelSolver 核岭回归 (K+αI)α=y')
-    ax.plot(x_grid, f_attn, 'r--', lw=2, label='固定注意力 = softmax 核平滑')
+    ax.scatter(x, y, s=20, alpha=0.6, label='Data')
+    ax.plot(x_grid, np.sin(2 * np.pi * x_grid), 'g-', lw=1.5, alpha=0.6, label='True function')
+    ax.plot(x_grid, f_ridge, 'b-', lw=2, label='KernelSolver ridge regression (K+αI)α=y')
+    ax.plot(x_grid, f_attn, 'r--', lw=2, label='Fixed attention = softmax kernel smoothing')
     ax.axvspan(-0.25, 0, color='gray', alpha=0.15)
     ax.axvspan(1, 1.25, color='gray', alpha=0.15)
-    ax.text(1.03, 0.9, '带外区域\n(展示估计器差异)', fontsize=8, color='gray')
+    ax.text(1.03, 0.9, 'Out-of-range region\n(estimator differences)', fontsize=8, color='gray')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.set_title('同一台核机器：解方程(岭) vs softmax 归一化(注意力)')
+    ax.set_title('One kernel machine: solve (ridge) vs softmax normalization (attention)')
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -94,4 +99,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print("示例完成！")
+    print("Demo complete!")

@@ -1,4 +1,4 @@
-"""函数求解器的内积基类。"""
+"""Inner product base class for the functional solver."""
 
 from typing import Callable, Dict, Any, Optional
 import numpy as np
@@ -6,13 +6,14 @@ from ..core.data_container import MultiDimData
 
 
 def _trapezoid_weights(x: np.ndarray) -> np.ndarray:
-    """一维复合梯形求积的逐点权重。
+    """Per-point weights for one-dimensional composite trapezoid quadrature.
 
-    对排序去重后的坐标 v₀ < v₁ < ... < v_{m-1}，权重为：
-        端点 h₀ = (v₁-v₀)/2, h_{m-1} = (v_{m-1}-v_{m-2})/2,
-        内部 hᵢ = (v_{i+1} - v_{i-1})/2，
-    于是 Σᵢ f(vᵢ)·hᵢ 就是复合梯形法则 ∫f dv。
-    坐标值重复出现的点共享其唯一值的权重（散点/网格数据均适用）。
+    For sorted, deduplicated coordinates v₀ < v₁ < ... < v_{m-1}, the weights are
+        endpoints h₀ = (v₁-v₀)/2, h_{m-1} = (v_{m-1}-v_{m-2})/2,
+        interior hᵢ = (v_{i+1} - v_{i-1})/2,
+    so that Σᵢ f(vᵢ)·hᵢ is the composite trapezoid rule ∫f dv. Points sharing a
+    repeated coordinate value receive the weight of their unique value (works
+    for both scattered and gridded data).
     """
     x = np.asarray(x, dtype=float)
     n = len(x)
@@ -25,7 +26,7 @@ def _trapezoid_weights(x: np.ndarray) -> np.ndarray:
     m = len(unique)
 
     if m == 1:
-        h = np.ones(m)          # 只有一个坐标值：退化为不加体积元
+        h = np.ones(m)          # single coordinate value: degenerate to no volume element
     elif m == 2:
         d = unique[1] - unique[0]
         h = np.array([d / 2.0, d / 2.0])
@@ -43,19 +44,21 @@ def _trapezoid_weights(x: np.ndarray) -> np.ndarray:
 
 
 class InnerProduct:
-    """函数空间上的内积定义。"""
+    """Definition of an inner product on a function space."""
 
     def __init__(self, weight_func: Optional[Callable] = None,
                  is_continuous: bool = True):
         """
-        初始化内积。
+        Initialize the inner product.
 
-        参数
-        ----
-        weight_func : Callable, 可选
-            加权内积中的权重函数 w(x)
-        is_continuous : bool, 默认=True
-            内积是定义在连续函数上（True，用数值积分）还是离散数据上（False，求和）
+        Parameters
+        ----------
+        weight_func : Callable, optional
+            Weight function w(x) of the weighted inner product.
+        is_continuous : bool, default=True
+            Whether the inner product is defined on continuous functions
+            (True, via numerical integration) or on discrete data
+            (False, via summation).
         """
         self.weight_func = weight_func
         self.is_continuous = is_continuous
@@ -63,21 +66,21 @@ class InnerProduct:
     def __call__(self, f: np.ndarray, g: np.ndarray,
                  data: Optional[MultiDimData] = None) -> float:
         """
-        计算两个函数向量之间的内积。
+        Compute the inner product of two function vectors.
 
-        参数
-        ----
+        Parameters
+        ----------
         f : np.ndarray
-            第一个函数在数据点上的取值
+            Values of the first function at the data points.
         g : np.ndarray
-            第二个函数在数据点上的取值
-        data : MultiDimData, 可选
-            数据容器（连续内积必需）
+            Values of the second function at the data points.
+        data : MultiDimData, optional
+            Data container (required for continuous inner products).
 
-        返回
-        ----
+        Returns
+        -------
         float
-            内积 ⟨f, g⟩
+            Inner product ⟨f, g⟩.
         """
         if self.is_continuous:
             if data is None:
@@ -86,13 +89,16 @@ class InnerProduct:
         else:
             return self._discrete_inner_product(f, g, data)
 
-    # ---------- 求积工具 ----------
+    # ---------- quadrature utilities ----------
 
     def _volume_weights(self, data: MultiDimData) -> np.ndarray:
-        """多维体积元权重：各维梯形权重的逐点乘积（多维复合梯形法则）。
+        """Multi-dimensional volume-element weights: per-dimension trapezoid
+        weights multiplied pointwise (multi-dimensional composite trapezoid rule).
 
-        对张量积网格（如 meshgrid 展平的数据）这就是标准的多维梯形求积；
-        对散点数据是合理近似（每一维按该维坐标的间距近似）。
+        For tensor-product grids (e.g. flattened meshgrid data) this is the
+        standard multi-dimensional trapezoid quadrature; for scattered data it
+        is a reasonable approximation (each dimension weighted by the spacing
+        of its own coordinates).
         """
         vw = np.ones(data.n_points)
         for dim in data.dims:
@@ -100,12 +106,13 @@ class InnerProduct:
         return vw
 
     def _point_weights(self, data: MultiDimData) -> np.ndarray:
-        """权重函数 w(x) 在数据点上的取值。"""
+        """Evaluate the weight function w(x) at the data points."""
         if self.weight_func is None:
             return np.ones(data.n_points)
         if data.n_dims == 1:
             return np.asarray(self.weight_func(data.get_dim(data.dims[0])), dtype=float)
-        # 多维：逐点以字典形式求值（WeightFunction 的指数/多项式等支持字典输入）
+        # Multi-dimensional: evaluate pointwise as dicts (the exponential,
+        # polynomial, etc. WeightFunction helpers accept dict input)
         w = np.empty(data.n_points)
         points = data.get_all_points()
         for i, p in enumerate(points):
@@ -115,7 +122,8 @@ class InnerProduct:
 
     def _continuous_inner_product(self, f: np.ndarray, g: np.ndarray,
                                   data: MultiDimData) -> float:
-        """连续内积：⟨f,g⟩ = ∫ f(x)g(x)w(x)dV，用多维复合梯形法则离散。"""
+        """Continuous inner product: ⟨f,g⟩ = ∫ f(x)g(x)w(x)dV, discretized by
+        the multi-dimensional composite trapezoid rule."""
         integrand = f * g * self._volume_weights(data)
         if self.weight_func is not None:
             integrand = integrand * self._point_weights(data)
@@ -123,7 +131,7 @@ class InnerProduct:
 
     def _discrete_inner_product(self, f: np.ndarray, g: np.ndarray,
                                 data: Optional[MultiDimData] = None) -> float:
-        """离散内积：⟨f,g⟩ = Σᵢ fᵢgᵢ（可加权）。"""
+        """Discrete inner product: ⟨f,g⟩ = Σᵢ fᵢgᵢ (optionally weighted)."""
         if self.weight_func is not None:
             if data is not None and len(data.dims) > 0:
                 w = self._point_weights(data)
@@ -135,19 +143,20 @@ class InnerProduct:
     def compute_gram_matrix(self, Phi: np.ndarray,
                             data: Optional[MultiDimData] = None) -> np.ndarray:
         """
-        计算基函数的 Gram 矩阵。
+        Compute the Gram matrix of basis functions.
 
-        参数
-        ----
+        Parameters
+        ----------
         Phi : np.ndarray
-            基函数矩阵，形状为 (n_points, n_basis)
-        data : MultiDimData, 可选
-            数据容器（连续内积必需）
+            Basis function matrix of shape (n_points, n_basis).
+        data : MultiDimData, optional
+            Data container (required for continuous inner products).
 
-        返回
-        ----
+        Returns
+        -------
         np.ndarray
-            Gram 矩阵，形状为 (n_basis, n_basis)，Gᵢⱼ = ⟨φᵢ, φⱼ⟩
+            Gram matrix of shape (n_basis, n_basis), with
+            G_ij = ⟨φᵢ, φⱼ⟩.
         """
         n_basis = Phi.shape[1]
         G = np.zeros((n_basis, n_basis))
@@ -164,29 +173,31 @@ class InnerProduct:
     def rhs_vector(self, Phi: np.ndarray, target: np.ndarray,
                    data: Optional[MultiDimData] = None) -> np.ndarray:
         """
-        计算法方程的右端向量：bᵢ = ⟨φᵢ, target⟩。
+        Compute the right-hand-side vector of the normal equations:
+        bᵢ = ⟨φᵢ, target⟩.
 
-        与 Gram 矩阵使用同一内积定义，保证 Gc = b 是同一内积空间下的
-        正交投影方程（一致性：一维下 bᵢ = ∫φᵢ(x)y(x)w(x)dx）。
+        Uses the same inner product as the Gram matrix, so that Gc = b is the
+        orthogonal projection equation in the same inner product space
+        (consistency: in one dimension bᵢ = ∫φᵢ(x)y(x)w(x)dx).
         """
         n_basis = Phi.shape[1]
         return np.array([self(Phi[:, i], target, data) for i in range(n_basis)])
 
     def norm(self, f: np.ndarray, data: Optional[MultiDimData] = None) -> float:
         """
-        计算函数的范数。
+        Compute the norm of a function.
 
-        参数
-        ----
+        Parameters
+        ----------
         f : np.ndarray
-            函数取值
-        data : MultiDimData, 可选
-            数据容器
+            Function values.
+        data : MultiDimData, optional
+            Data container.
 
-        返回
-        ----
+        Returns
+        -------
         float
-            范数 ||f|| = sqrt(⟨f, f⟩)
+            Norm ||f|| = sqrt(⟨f, f⟩).
         """
         return np.sqrt(self(f, f, data))
 

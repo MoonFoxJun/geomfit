@@ -1,4 +1,4 @@
-"""用于函数逼近的 Gram 矩阵求解器。"""
+"""Gram-matrix solver for functional approximation."""
 
 import numpy as np
 from typing import Optional, Dict, Any
@@ -7,18 +7,18 @@ from ..core.basis_container import BasisSet
 from ..inner_product.base import InnerProduct
 
 class GramSolver:
-    """使用 Gram 矩阵方法的求解器。"""
+    """Solver based on the Gram-matrix formulation."""
     
     def __init__(self, basis_set: BasisSet, inner_product: InnerProduct):
         """
-        初始化 Gram 求解器。
+        Initialize the Gram solver.
         
-        参数
+        Parameters
         ----------
         basis_set : BasisSet
-            基函数集合
+            Basis-function set.
         inner_product : InnerProduct
-            内积定义
+            Inner-product definition.
         """
         self.basis_set = basis_set
         self.inner_product = inner_product
@@ -28,13 +28,13 @@ class GramSolver:
         self.gram_matrix = None
     
     def load_data(self, data: MultiDimData, target: np.ndarray):
-        """加载用于求解的数据。"""
+        """Load the data used for solving."""
         self.data = data
         self.target = target
         assert data.n_points == len(target), "Number of data points must match target values"
     
     def compute_gram_matrix(self) -> np.ndarray:
-        """计算基集合的 Gram 矩阵。"""
+        """Compute the Gram matrix G_ij = <phi_i, phi_j> of the basis set."""
         if self.data is None:
             raise ValueError("Data not loaded")
         
@@ -43,7 +43,8 @@ class GramSolver:
         return self.gram_matrix
     
     def compute_rhs(self) -> np.ndarray:
-        """计算右端向量（与 Gram 矩阵同一内积定义）。"""
+        """Compute the right-hand side vector b_i = <phi_i, y>, using the same
+        inner product as the Gram matrix."""
         if self.data is None or self.target is None:
             raise ValueError("Data and target not loaded")
         
@@ -51,14 +52,14 @@ class GramSolver:
         return self.inner_product.rhs_vector(Phi, self.target, self.data)
     
     def solve(self, regularization: Optional[Dict] = None) -> np.ndarray:
-        """求解系数。"""
+        """Solve the normal equations Gc = b for the coefficients."""
         from ..inner_product.regularization import Regularization
         
-        # 计算 Gram 矩阵和右端向量
+        # Compute the Gram matrix and the right-hand side
         G = self.compute_gram_matrix()
         b = self.compute_rhs()
         
-        # 如有需要则应用正则化
+        # Apply regularization if requested
         if regularization:
             method = regularization.get("method", "tikhonov")
             if method == "tikhonov":
@@ -71,7 +72,7 @@ class GramSolver:
                 self.coefficients = Vh.T @ (s_inv * (U.T @ b))
                 return self.coefficients
         
-        # 求解线性方程组
+        # Solve the linear system
         try:
             self.coefficients = np.linalg.solve(G, b)
         except np.linalg.LinAlgError:
@@ -80,7 +81,7 @@ class GramSolver:
         return self.coefficients
     
     def predict(self, new_data: MultiDimData) -> np.ndarray:
-        """预测新数据的值。"""
+        """Predict values for new data."""
         if self.coefficients is None:
             raise ValueError("Must call solve() first")
         
@@ -88,14 +89,14 @@ class GramSolver:
         return Phi_new @ self.coefficients
     
     def get_condition_number(self) -> float:
-        """获取 Gram 矩阵的条件数。"""
+        """Return the condition number of the Gram matrix."""
         if self.gram_matrix is None:
             self.compute_gram_matrix()
         
         return np.linalg.cond(self.gram_matrix)
     
     def get_singular_values(self) -> np.ndarray:
-        """获取 Gram 矩阵的奇异值。"""
+        """Return the singular values of the Gram matrix."""
         if self.gram_matrix is None:
             self.compute_gram_matrix()
         
@@ -103,22 +104,23 @@ class GramSolver:
     
     def check_orthogonality(self) -> np.ndarray:
         """
-        检查基函数的正交性。
+        Check the orthogonality of the basis functions.
         
-        返回
+        Returns
         -------
         np.ndarray
-            基函数之间的内积矩阵
+            Inner-product matrix between basis functions, normalized by the
+            diagonal to give a correlation-like matrix.
         """
         if self.gram_matrix is None:
             self.compute_gram_matrix()
         
-        # 按对角线归一化，得到类似相关矩阵的结果
+        # Normalize by the diagonal to obtain a correlation-like matrix
         diag = np.diag(self.gram_matrix)
         diag_sqrt = np.sqrt(diag)
         diag_inv_sqrt = 1.0 / diag_sqrt
         
-        # 计算归一化的 Gram 矩阵
+        # Normalized Gram matrix
         G_norm = self.gram_matrix * diag_inv_sqrt[:, None] * diag_inv_sqrt[None, :]
         
         return G_norm

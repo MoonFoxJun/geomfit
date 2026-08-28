@@ -1,20 +1,20 @@
-"""功能求解器的多维数据容器。"""
+"""Multi-dimensional container for the functional solver's data points."""
 
 from typing import Dict, List, Any, Optional, Union
 import numpy as np
 
 class MultiDimData:
-    """多维数据点的容器。"""
+    """Container for multi-dimensional data points."""
     
     def __init__(self, data_dict: Dict[int, np.ndarray]):
         """
-        用一个字典初始化，字典把维度索引映射到坐标数组。
+        Initialize from a dictionary mapping dimension indices to coordinate arrays.
 
-        参数
-        ----
+        Parameters
+        ----------
         data_dict : Dict[int, np.ndarray]
-            字典的键是维度索引，值是对应的坐标数组。
-            所有数组的长度必须相同（即点数）。
+            Keys are dimension indices and values are the corresponding coordinate
+            arrays. All arrays must have the same length (the number of points).
         """
         if not data_dict:
             raise ValueError("data_dict must contain at least one dimension")
@@ -26,7 +26,7 @@ class MultiDimData:
         self.data = data_dict
         self.dims = sorted(data_dict.keys())
         
-        # 验证所有数组的长度是否相同
+        # Verify that all coordinate arrays share the same length
         lengths = [len(arr) for arr in data_dict.values()]
         if len(set(lengths)) > 1:
             raise ValueError("All coordinate arrays must have the same length")
@@ -37,99 +37,118 @@ class MultiDimData:
     
     @property
     def values(self) -> Optional[np.ndarray]:
-        """获取与数据点关联的目标值。"""
+        """Target values associated with the data points."""
         return self._values
     
     @values.setter
     def values(self, values: np.ndarray):
-        """设置目标值，并校验其长度与 n_points 一致。"""
+        """Set the target values, validating their length against n_points."""
         if values is not None and len(values) != self.n_points:
             raise ValueError("Values must have the same length as the data points")
         self._values = values
     
     def get_dim(self, dim: int) -> np.ndarray:
-        """获取指定维度的坐标数组。"""
+        """Return the coordinate array of the given dimension."""
         return self.data[dim]
     
     def get_point(self, index: int) -> Dict[int, float]:
-        """以字典形式获取某个点的坐标。"""
+        """Return the coordinates of one point as a dict keyed by dimension."""
         return {dim: self.data[dim][index] for dim in self.dims}
     
     def get_all_points(self) -> List[Dict[int, float]]:
-        """以字典列表的形式获取所有点。"""
+        """Return all points as a list of dicts keyed by dimension."""
         return [self.get_point(i) for i in range(self.n_points)]
     
     def get_coordinate_matrix(self) -> np.ndarray:
-        """把坐标整理成形状为 (n_points, n_dims) 的矩阵。"""
+        """Arrange the coordinates into a matrix of shape (n_points, n_dims)."""
         return np.column_stack([self.data[dim] for dim in self.dims])
     
     def slice(self, indices) -> 'MultiDimData':
-        """返回只包含指定索引的新 MultiDimData。"""
+        """Return a new MultiDimData containing only the given indices."""
         indices = np.asarray(indices)
         return MultiDimData({dim: self.data[dim][indices] for dim in self.dims})
     
     def mask(self, mask) -> 'MultiDimData':
-        """返回由布尔掩码筛选出的新 MultiDimData。"""
+        """Return a new MultiDimData filtered by a boolean mask."""
         mask = np.asarray(mask, dtype=bool)
         return MultiDimData({dim: self.data[dim][mask] for dim in self.dims})
     
     def mean(self) -> np.ndarray:
-        """按 dims 顺序返回每个维度的均值。"""
+        """Return the per-dimension mean, in ascending `dims` order."""
         return np.array([self.data[dim].mean() for dim in self.dims])
     
     def std(self) -> np.ndarray:
-        """按 dims 顺序返回每个维度的标准差。"""
+        """Return the per-dimension standard deviation, in ascending `dims` order."""
         return np.array([self.data[dim].std() for dim in self.dims])
     
     def min(self) -> np.ndarray:
-        """按 dims 顺序返回每个维度的最小值。"""
+        """Return the per-dimension minimum, in ascending `dims` order."""
         return np.array([self.data[dim].min() for dim in self.dims])
     
     def max(self) -> np.ndarray:
-        """按 dims 顺序返回每个维度的最大值。"""
+        """Return the per-dimension maximum, in ascending `dims` order."""
         return np.array([self.data[dim].max() for dim in self.dims])
     
     def to_array(self, dims: Optional[List[int]] = None) -> np.ndarray:
-        """把坐标转换成形状为 (n_points, n_dims) 的矩阵。"""
+        """
+        Convert the coordinates into a matrix of shape (n_points, n_dims).
+
+        Parameters
+        ----------
+        dims : List[int], optional
+            Column order; defaults to the ascending dimension order of the data.
+
+        Returns
+        -------
+        np.ndarray
+            Coordinate matrix with one column per requested dimension.
+        """
         order = dims if dims is not None else self.dims
         return np.column_stack([self.data[dim] for dim in order])
     
     def __add__(self, other: 'MultiDimData') -> 'MultiDimData':
-        """两个 MultiDimData 对象的逐元素相加。"""
+        """Elementwise addition of two MultiDimData objects."""
         if not isinstance(other, MultiDimData):
             return NotImplemented
         return MultiDimData({dim: self.data[dim] + other.data[dim] for dim in self.dims})
     
     def __sub__(self, other: 'MultiDimData') -> 'MultiDimData':
-        """两个 MultiDimData 对象的逐元素相减。"""
+        """Elementwise subtraction of two MultiDimData objects."""
         if not isinstance(other, MultiDimData):
             return NotImplemented
         return MultiDimData({dim: self.data[dim] - other.data[dim] for dim in self.dims})
     
     def __mul__(self, scalar: float) -> 'MultiDimData':
-        """标量乘法。"""
+        """Scalar multiplication."""
         return MultiDimData({dim: self.data[dim] * scalar for dim in self.dims})
     
     def __rmul__(self, scalar: float) -> 'MultiDimData':
-        """标量乘法（标量在左边）。"""
+        """Scalar multiplication (scalar on the left)."""
         return self.__mul__(scalar)
     
     def __truediv__(self, scalar: float) -> 'MultiDimData':
-        """标量除法。"""
+        """Scalar division."""
         return MultiDimData({dim: self.data[dim] / scalar for dim in self.dims})
     
     @classmethod
     def concatenate(cls, data_list: List['MultiDimData'], axis: int = 0) -> 'MultiDimData':
         """
-        拼接多个 MultiDimData 对象。
+        Concatenate several MultiDimData objects.
 
-        参数
-        ----
+        Parameters
+        ----------
         data_list : List[MultiDimData]
-            要拼接的对象
-        axis : int, 默认=0
-            若为 0：沿点数方向拼接（各对象的 dims 必须一致）。
-            若为 1：沿维度方向拼接（各对象的 n_points 必须一致）。
+            Objects to concatenate.
+        axis : int, default=0
+            If 0: concatenate along the point axis (all objects must share the
+            same dims).
+            If 1: concatenate along the dimension axis (all objects must have the
+            same n_points).
+
+        Returns
+        -------
+        MultiDimData
+            The concatenated container.
         """
         if not data_list:
             raise ValueError("data_list must not be empty")
@@ -159,16 +178,22 @@ class MultiDimData:
     def from_array(cls, array: np.ndarray, dim: Optional[int] = None,
                    dims: Optional[List[int]] = None) -> 'MultiDimData':
         """
-        从 numpy 数组创建 MultiDimData。
+        Create a MultiDimData from a numpy array.
 
-        参数
-        ----
+        Parameters
+        ----------
         array : np.ndarray
-            一维数组变成一个维度；二维数组的每一列成为一个维度。
-        dim : int, 可选
-            一维数组对应的维度索引。
-        dims : List[int], 可选
-            二维数组各列对应的维度索引（默认是 0..n_cols-1）。
+            A 1D array becomes a single dimension; each column of a 2D array
+            becomes a dimension.
+        dim : int, optional
+            Dimension index for a 1D array.
+        dims : List[int], optional
+            Dimension indices for the columns of a 2D array (default: 0..n_cols-1).
+
+        Returns
+        -------
+        MultiDimData
+            The constructed container.
         """
         arr = np.asarray(array)
         
@@ -188,10 +213,13 @@ class MultiDimData:
             raise ValueError(f"array must be 1D or 2D, got {arr.ndim}D")
     
     def __len__(self) -> int:
+        """Number of data points."""
         return self.n_points
     
     def __repr__(self) -> str:
+        """Machine-readable representation of the container."""
         return f"MultiDimData(n_points={self.n_points}, dims={self.dims})"
     
     def __str__(self) -> str:
+        """String representation identical to repr."""
         return self.__repr__()

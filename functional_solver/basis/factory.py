@@ -1,15 +1,28 @@
-"""基函数工厂 - 提供各种预定义基函数"""
+"""Factory for predefined single-factor and tensor-product basis functions."""
 
 import numpy as np
 from typing import Callable, Dict, List
 from ..core.basis_container import BasisInfo
 
 class BasisFactory:
-    """基函数工厂，提供各种预定义基"""
+    """Factory providing predefined basis functions."""
     
     @staticmethod 
     def polynomial(dim: int, order: int):
-        """多项式基：x^n"""
+        """Monomial basis φ(x) = x^order.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        order : int
+            Polynomial order.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor monomial basis.
+        """
         def func(x, order):
             return x ** order
         return BasisInfo(
@@ -21,7 +34,20 @@ class BasisFactory:
     
     @staticmethod 
     def legendre(dim: int, order: int):
-        """勒让德多项式（更数值稳定）"""
+        """Legendre polynomial basis P_order(x) (numerically more stable than monomials).
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        order : int
+            Polynomial order.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor Legendre basis, evaluated with numpy's Legendre routine.
+        """
         from numpy.polynomial.legendre import legval
         def func(x, order):
             return legval(x, [0]*order + [1])
@@ -34,7 +60,22 @@ class BasisFactory:
     
     @staticmethod 
     def fourier(dim: int, freq: int, L: float = 2*np.pi):
-        """傅里叶基：cos(2πf x/L) 和 sin(2πf x/L)"""
+        """Fourier basis: cos(2πf x/L) and sin(2πf x/L).
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the bases act on.
+        freq : int
+            Frequency; for freq=0 only the constant basis φ ≡ 1 is returned.
+        L : float, default=2π
+            Period of the trigonometric functions.
+
+        Returns
+        -------
+        List[BasisInfo]
+            The constant basis (freq=0) or the cosine and sine bases (freq>0).
+        """
         def func_cos(x, freq, L):
             return np.cos(2 * np.pi * freq * x / L)
         
@@ -66,7 +107,21 @@ class BasisFactory:
     
     @staticmethod 
     def laurent(dim: int, order: int):
-        """洛朗级数基：x^n 和 x^{-n} (x ≠ 0)"""
+        """Laurent basis: x^order and x^−order (for x ≠ 0).
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the bases act on.
+        order : int
+            Laurent order; for order=0 only the constant basis φ ≡ 1 is returned.
+
+        Returns
+        -------
+        List[BasisInfo]
+            The constant basis (order=0) or the positive- and negative-power
+            bases (order>0). The negative-power branch evaluates to 0 at x = 0.
+        """
         def func_positive(x, order):
             return x ** order
         
@@ -98,7 +153,22 @@ class BasisFactory:
     
     @staticmethod 
     def gaussian_rbf(dim: int, center: float, sigma: float = 1.0):
-        """高斯径向基函数"""
+        """Gaussian radial basis function φ(x) = exp(−(x − center)²/(2σ²)).
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        center : float
+            Center of the Gaussian.
+        sigma : float, default=1.0
+            Width of the Gaussian.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor Gaussian RBF basis.
+        """
         def func(x, center, sigma):
             return np.exp(-((x - center) ** 2) / (2 * sigma ** 2))
         
@@ -111,7 +181,24 @@ class BasisFactory:
     
     @staticmethod 
     def wavelet(dim: int, scale: float, translation: float, wavelet_type: str = "mexican_hat"):
-        """小波基函数"""
+        """Wavelet basis of the requested type, with t = (x − translation)/scale.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        scale : float
+            Wavelet scale.
+        translation : float
+            Wavelet translation.
+        wavelet_type : str, default="mexican_hat"
+            One of "mexican_hat" or "morlet".
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor wavelet basis.
+        """
         if wavelet_type == "mexican_hat":
             def func(x, scale, translation):
                 t = (x - translation) / scale
@@ -133,20 +220,23 @@ class BasisFactory:
     @staticmethod
     def tensor_product(dim_bases: Dict[int, List[BasisInfo]]) -> List[BasisInfo]:
         """
-        多维张量积基：给定每个维度的基函数列表，生成所有乘积组合。
+        Multi-dimensional tensor-product basis: build every product combination
+        of the per-dimension basis lists.
 
-        例如 dim_bases = {0: [X₁, X₂], 1: [Y₁, Y₂]} 生成 X₁⊗Y₁, X₁⊗Y₂, X₂⊗Y₁, X₂⊗Y₂，
-        数学形式 f(x,y) = Σᵢ Σⱼ cᵢⱼ Xᵢ(x)Yⱼ(y)。
+        For example, dim_bases = {0: [X₁, X₂], 1: [Y₁, Y₂]} generates
+        X₁⊗Y₁, X₁⊗Y₂, X₂⊗Y₁, X₂⊗Y₂, i.e. the model
+        f(x, y) = Σᵢ Σⱼ cᵢⱼ Xᵢ(x)Yⱼ(y).
 
-        参数
-        ----
+        Parameters
+        ----------
         dim_bases : Dict[int, List[BasisInfo]]
-            维度索引 -> 该维度的基函数列表
+            Dimension index -> list of bases for that dimension.
 
-        返回
-        ----
+        Returns
+        -------
         List[BasisInfo]
-            所有乘积组合的基函数（每个都是多因子张量积基）
+            All product combinations; each returned basis is a multi-factor
+            tensor-product basis.
         """
         import itertools
 
@@ -157,7 +247,7 @@ class BasisFactory:
 
         products = []
         for combo in itertools.product(*lists):
-            # 展开每个因子的因子（若因子本身是张量积基则递归展开）
+            # Flatten nested tensor-product factors into a single factor list
             factors = []
             for b in combo:
                 if b.factors is not None:
@@ -176,7 +266,24 @@ class BasisFactory:
 
     @staticmethod 
     def custom(dim: int, name: str, func: Callable, params: Dict = None):
-        """完全自定义的基函数"""
+        """Fully custom single-factor basis from an arbitrary callable.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension index the basis acts on.
+        name : str
+            Name of the basis.
+        func : Callable
+            Evaluation function func(x, **params).
+        params : Dict, optional
+            Parameters passed to `func`.
+
+        Returns
+        -------
+        BasisInfo
+            Single-factor custom basis.
+        """
         return BasisInfo(
             name=name,
             dim=dim,

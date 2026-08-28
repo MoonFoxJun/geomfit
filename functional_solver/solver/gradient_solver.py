@@ -1,4 +1,4 @@
-"""用于函数逼近的梯度下降求解器。"""
+"""Gradient-descent solver for functional approximation."""
 
 import numpy as np
 from typing import Optional, Dict, Any, Callable
@@ -7,18 +7,18 @@ from ..core.basis_container import BasisSet
 from ..inner_product.base import InnerProduct
 
 class GradientSolver:
-    """用于函数优化的梯度下降求解器。"""
+    """Gradient-descent solver for the least-squares fitting problem."""
     
     def __init__(self, basis_set: BasisSet, inner_product: InnerProduct):
         """
-        初始化梯度下降求解器。
+        Initialize the gradient-descent solver.
         
-        参数
+        Parameters
         ----------
         basis_set : BasisSet
-            基函数集合
+            Basis-function set.
         inner_product : InnerProduct
-            内积定义
+            Inner-product definition.
         """
         self.basis_set = basis_set
         self.inner_product = inner_product
@@ -28,29 +28,29 @@ class GradientSolver:
         self.loss_history = []
     
     def load_data(self, data: MultiDimData, target: np.ndarray):
-        """加载用于求解的数据。"""
+        """Load the data used for solving."""
         self.data = data
         self.target = target
         assert data.n_points == len(target), "Number of data points must match target values"
     
     def compute_loss(self, coefficients: np.ndarray) -> float:
-        """计算损失函数值。"""
+        """Compute the least-squares loss 0.5 * ||Phi c - y||^2."""
         Phi = self.basis_set.evaluate_all(self.data)
         predictions = Phi @ coefficients
         residuals = predictions - self.target
         
-        # L2 损失
+        # Half the squared L2 residual
         loss = 0.5 * np.sum(residuals ** 2)
         
         return loss
     
     def compute_gradient(self, coefficients: np.ndarray) -> np.ndarray:
-        """计算损失函数的梯度。"""
+        """Compute the loss gradient Phi^T (Phi c - y)."""
         Phi = self.basis_set.evaluate_all(self.data)
         predictions = Phi @ coefficients
         residuals = predictions - self.target
         
-        # 梯度：Φ^T (Φc - y)
+        # Gradient: Φ^T (Φc - y)
         gradient = Phi.T @ residuals
         
         return gradient
@@ -58,29 +58,29 @@ class GradientSolver:
     def solve(self, learning_rate: float = 0.01, max_iter: int = 1000,
               tol: float = 1e-6, regularization: Optional[Dict] = None) -> np.ndarray:
         """
-        使用梯度下降求解。
+        Solve by plain gradient descent on the least-squares loss.
         
-        参数
+        Parameters
         ----------
-        learning_rate : float, 默认=0.01
-            梯度下降的学习率
-        max_iter : int, 默认=1000
-            最大迭代次数
-        tol : float, 默认=1e-6
-            收敛容差
-        regularization : Dict, 可选
-            正则化参数
+        learning_rate : float, default=0.01
+            Learning rate of the gradient-descent update.
+        max_iter : int, default=1000
+            Maximum number of iterations.
+        tol : float, default=1e-6
+            Convergence tolerance on the change in loss.
+        regularization : Dict, optional
+            Regularization parameters; supported keys are "lambda" (strength)
+            and "type" ("l1" or "l2").
             
-        返回
+        Returns
         -------
         np.ndarray
-            最优系数
+            Optimal coefficients.
         """
         n_basis = len(self.basis_set)
         self.coefficients = np.zeros(n_basis)
         self.loss_history = []
         
-        # 提取正则化参数
         reg_lambda = 0.0
         reg_type = "l2"
         if regularization:
@@ -88,10 +88,9 @@ class GradientSolver:
             reg_type = regularization.get("type", "l2")
         
         for iteration in range(max_iter):
-            # 计算损失
             loss = self.compute_loss(self.coefficients)
             
-            # 加入正则化损失
+            # Add the regularization term to the loss
             if reg_lambda > 0:
                 if reg_type == "l2":
                     loss += 0.5 * reg_lambda * np.sum(self.coefficients ** 2)
@@ -100,20 +99,19 @@ class GradientSolver:
             
             self.loss_history.append(loss)
             
-            # 计算梯度
             gradient = self.compute_gradient(self.coefficients)
             
-            # 加入正则化梯度
+            # Add the regularization term to the gradient
             if reg_lambda > 0:
                 if reg_type == "l2":
                     gradient += reg_lambda * self.coefficients
                 elif reg_type == "l1":
                     gradient += reg_lambda * np.sign(self.coefficients)
             
-            # 更新系数
+            # Gradient-descent update: c <- c - eta * grad
             self.coefficients -= learning_rate * gradient
             
-            # 检查收敛性
+            # Stop when the loss change falls below the tolerance
             if iteration > 0:
                 loss_change = abs(self.loss_history[-2] - loss)
                 if loss_change < tol:
@@ -124,13 +122,12 @@ class GradientSolver:
     def solve_with_momentum(self, learning_rate: float = 0.01, momentum: float = 0.9,
                            max_iter: int = 1000, tol: float = 1e-6,
                            regularization: Optional[Dict] = None) -> np.ndarray:
-        """使用带动量的梯度下降求解。"""
+        """Solve by gradient descent with momentum."""
         n_basis = len(self.basis_set)
         self.coefficients = np.zeros(n_basis)
         velocity = np.zeros(n_basis)
         self.loss_history = []
         
-        # 提取正则化参数
         reg_lambda = 0.0
         reg_type = "l2"
         if regularization:
@@ -138,10 +135,9 @@ class GradientSolver:
             reg_type = regularization.get("type", "l2")
         
         for iteration in range(max_iter):
-            # 计算损失
             loss = self.compute_loss(self.coefficients)
             
-            # 加入正则化损失
+            # Add the regularization term to the loss
             if reg_lambda > 0:
                 if reg_type == "l2":
                     loss += 0.5 * reg_lambda * np.sum(self.coefficients ** 2)
@@ -150,21 +146,20 @@ class GradientSolver:
             
             self.loss_history.append(loss)
             
-            # 计算梯度
             gradient = self.compute_gradient(self.coefficients)
             
-            # 加入正则化梯度
+            # Add the regularization term to the gradient
             if reg_lambda > 0:
                 if reg_type == "l2":
                     gradient += reg_lambda * self.coefficients
                 elif reg_type == "l1":
                     gradient += reg_lambda * np.sign(self.coefficients)
             
-            # 更新动量和系数
+            # Momentum update: v <- mu * v - eta * grad; c <- c + v
             velocity = momentum * velocity - learning_rate * gradient
             self.coefficients += velocity
             
-            # 检查收敛性
+            # Stop when the loss change falls below the tolerance
             if iteration > 0:
                 loss_change = abs(self.loss_history[-2] - loss)
                 if loss_change < tol:
@@ -176,14 +171,13 @@ class GradientSolver:
                   beta2: float = 0.999, epsilon: float = 1e-8,
                   max_iter: int = 1000, tol: float = 1e-6,
                   regularization: Optional[Dict] = None) -> np.ndarray:
-        """使用 Adam 优化器求解。"""
+        """Solve using the Adam optimizer."""
         n_basis = len(self.basis_set)
         self.coefficients = np.zeros(n_basis)
-        m = np.zeros(n_basis)  # 一阶矩
-        v = np.zeros(n_basis)  # 二阶矩
+        m = np.zeros(n_basis)  # First moment estimate
+        v = np.zeros(n_basis)  # Second raw moment estimate
         self.loss_history = []
         
-        # 提取正则化参数
         reg_lambda = 0.0
         reg_type = "l2"
         if regularization:
@@ -191,10 +185,9 @@ class GradientSolver:
             reg_type = regularization.get("type", "l2")
         
         for t in range(1, max_iter + 1):
-            # 计算损失
             loss = self.compute_loss(self.coefficients)
             
-            # 加入正则化损失
+            # Add the regularization term to the loss
             if reg_lambda > 0:
                 if reg_type == "l2":
                     loss += 0.5 * reg_lambda * np.sum(self.coefficients ** 2)
@@ -203,32 +196,31 @@ class GradientSolver:
             
             self.loss_history.append(loss)
             
-            # 计算梯度
             gradient = self.compute_gradient(self.coefficients)
             
-            # 加入正则化梯度
+            # Add the regularization term to the gradient
             if reg_lambda > 0:
                 if reg_type == "l2":
                     gradient += reg_lambda * self.coefficients
                 elif reg_type == "l1":
                     gradient += reg_lambda * np.sign(self.coefficients)
             
-            # 更新有偏一阶矩估计
+            # Biased first-moment estimate: m_t = beta1 * m_{t-1} + (1 - beta1) * g
             m = beta1 * m + (1 - beta1) * gradient
             
-            # 更新有偏二阶原始矩估计
+            # Biased second raw moment estimate: v_t = beta2 * v_{t-1} + (1 - beta2) * g^2
             v = beta2 * v + (1 - beta2) * (gradient ** 2)
             
-            # 计算偏差修正后的一阶矩估计
+            # Bias-corrected first-moment estimate
             m_hat = m / (1 - beta1 ** t)
             
-            # 计算偏差修正后的二阶原始矩估计
+            # Bias-corrected second raw moment estimate
             v_hat = v / (1 - beta2 ** t)
             
-            # 更新参数
+            # Parameter update with numerical-stability epsilon
             self.coefficients -= learning_rate * m_hat / (np.sqrt(v_hat) + epsilon)
             
-            # 检查收敛性
+            # Stop when the loss change falls below the tolerance
             if t > 1:
                 loss_change = abs(self.loss_history[-2] - loss)
                 if loss_change < tol:
@@ -237,7 +229,7 @@ class GradientSolver:
         return self.coefficients
     
     def predict(self, new_data: MultiDimData) -> np.ndarray:
-        """预测新数据的值。"""
+        """Predict values for new data."""
         if self.coefficients is None:
             raise ValueError("Must call solve() first")
         
@@ -245,17 +237,21 @@ class GradientSolver:
         return Phi_new @ self.coefficients
     
     def get_loss_history(self) -> np.ndarray:
-        """获取训练过程中的损失历史。"""
+        """Return the loss history over training iterations."""
         return np.array(self.loss_history)
     
     def compute_optimal_learning_rate(self) -> float:
         """
-        使用线搜索计算最优学习率。
+        Estimate the optimal learning rate for the quadratic least-squares loss.
         
-        返回
+        The optimal rate for a quadratic objective is 1 / lambda_max, where
+        lambda_max is the largest eigenvalue of the Hessian approximation
+        H = Phi^T Phi.
+        
+        Returns
         -------
         float
-            最优学习率
+            Optimal learning rate, or a default of 0.01 when H is singular.
         """
         if self.coefficients is None:
             self.coefficients = np.zeros(len(self.basis_set))
@@ -263,10 +259,10 @@ class GradientSolver:
         gradient = self.compute_gradient(self.coefficients)
         Phi = self.basis_set.evaluate_all(self.data)
         
-        # 计算 Hessian 近似：Φ^T Φ
+        # Hessian approximation: H = Phi^T Phi
         H = Phi.T @ Phi
         
-        # 二次函数的最优学习率：1 / H 的最大特征值
+        # Optimal learning rate for a quadratic: 1 / lambda_max(H)
         eigenvalues = np.linalg.eigvalsh(H)
         max_eigenvalue = np.max(eigenvalues)
         

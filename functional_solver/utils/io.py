@@ -1,4 +1,4 @@
-"""函数求解器的输入/输出工具。"""
+"""Input/output utilities for the functional solver."""
 
 import numpy as np
 import json
@@ -9,51 +9,51 @@ from pathlib import Path
 from ..core.data_container import MultiDimData
 
 class IOUtils:
-    """用于数据处理的输入/输出工具。"""
+    """Input/output utilities for data, basis sets, and solver states."""
     
     @staticmethod
     def load_csv(filepath: str, dim_columns: List[str] = None, 
                 value_column: str = None) -> MultiDimData:
         """
-        从 CSV 文件加载数据。
+        Load data from a CSV file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            CSV 文件路径
-        dim_columns : List[str], 可选
-            维度对应的列名
-        value_column : str, 可选
-            值对应的列名
+            Path to the CSV file.
+        dim_columns : List[str], optional
+            Column names holding the dimension coordinates.
+        value_column : str, optional
+            Column name holding the values.
             
-        返回
+        Returns
         -------
         MultiDimData
-            加载的数据容器
+            Loaded data container.
         """
         try:
             import pandas as pd
         except ImportError:
-            raise ImportError("load_csv 需要 pandas，请先安装：pip install pandas")
+            raise ImportError("load_csv requires pandas; install it with: pip install pandas")
         df = pd.read_csv(filepath)
         
         if dim_columns is None:
-            # 假设除最后一列外都是维度列
+            # Default: all columns except the last are dimensions
             dim_columns = df.columns[:-1].tolist()
         
         if value_column is None:
-            # 假设最后一列是值
+            # Default: the last column holds the values
             value_column = df.columns[-1]
         
-        # 提取维度数据
+        # Extract the dimension columns
         dim_data = {}
         for i, col in enumerate(dim_columns):
             dim_data[i] = df[col].values
         
-        # 创建 MultiDimData
+        # Build the data container
         data = MultiDimData(dim_data)
         
-        # 如有需要则保存值
+        # Attach the value column if present
         if value_column in df.columns:
             data.values = df[value_column].values
         
@@ -62,22 +62,21 @@ class IOUtils:
     @staticmethod
     def save_csv(data: MultiDimData, filepath: str, value_column: str = "values"):
         """
-        将数据保存为 CSV 文件。
+        Save data to a CSV file.
         
-        参数
+        Parameters
         ----------
         data : MultiDimData
-            要保存的数据容器
+            Data container to save.
         filepath : str
-            CSV 文件的保存路径
-        value_column : str, 默认="values"
-            值对应的列名
+            Path of the CSV file to write.
+        value_column : str, default="values"
+            Column name for the values.
         """
         try:
             import pandas as pd
         except ImportError:
-            raise ImportError("save_csv 需要 pandas，请先安装：pip install pandas")
-        # 创建 DataFrame
+            raise ImportError("save_csv requires pandas; install it with: pip install pandas")
         records = []
         for i in range(data.n_points):
             point = data.get_point(i)
@@ -94,79 +93,79 @@ class IOUtils:
     @staticmethod
     def load_npy(filepath: str) -> np.ndarray:
         """
-        从 .npy 文件加载 numpy 数组。
+        Load a numpy array from a .npy file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            .npy 文件路径
+            Path to the .npy file.
             
-        返回
+        Returns
         -------
         np.ndarray
-            加载的数组
+            Loaded array.
         """
         return np.load(filepath)
     
     @staticmethod
     def save_npy(array: np.ndarray, filepath: str):
         """
-        将 numpy 数组保存为 .npy 文件。
+        Save a numpy array to a .npy file.
         
-        参数
+        Parameters
         ----------
         array : np.ndarray
-            要保存的数组
+            Array to save.
         filepath : str
-            .npy 文件的保存路径
+            Path of the .npy file to write.
         """
         np.save(filepath, array)
     
     @staticmethod
     def load_npz(filepath: str) -> Dict[str, np.ndarray]:
         """
-        从 .npz 文件加载数据。
+        Load data from a .npz file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            .npz 文件路径
+            Path to the .npz file.
             
-        返回
+        Returns
         -------
         Dict[str, np.ndarray]
-            数组字典
+            Dictionary of arrays.
         """
         return dict(np.load(filepath))
     
     @staticmethod
     def save_npz(data: Dict[str, np.ndarray], filepath: str):
         """
-        将数据保存为 .npz 文件。
+        Save data to a .npz file.
         
-        参数
+        Parameters
         ----------
         data : Dict[str, np.ndarray]
-            要保存的数组字典
+            Dictionary of arrays to save.
         filepath : str
-            .npz 文件的保存路径
+            Path of the .npz file to write.
         """
         np.savez(filepath, **data)
     
     @staticmethod
     def load_json(filepath: str) -> Dict[str, Any]:
         """
-        从 JSON 文件加载数据。
+        Load data from a JSON file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            JSON 文件路径
+            Path to the JSON file.
             
-        返回
+        Returns
         -------
         Dict[str, Any]
-            加载的数据
+            Loaded data.
         """
         with open(filepath, 'r') as f:
             return json.load(f)
@@ -174,16 +173,16 @@ class IOUtils:
     @staticmethod
     def save_json(data: Dict[str, Any], filepath: str, indent: int = 2):
         """
-        将数据保存为 JSON 文件。
+        Save data to a JSON file.
         
-        参数
+        Parameters
         ----------
         data : Dict[str, Any]
-            要保存的数据
+            Data to save.
         filepath : str
-            JSON 文件的保存路径
-        indent : int, 默认=2
-            美化输出的缩进量
+            Path of the JSON file to write.
+        indent : int, default=2
+            Indentation used for pretty-printing.
         """
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=indent)
@@ -191,17 +190,17 @@ class IOUtils:
     @staticmethod
     def load_yaml(filepath: str) -> Dict[str, Any]:
         """
-        从 YAML 文件加载数据。
+        Load data from a YAML file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            YAML 文件路径
+            Path to the YAML file.
             
-        返回
+        Returns
         -------
         Dict[str, Any]
-            加载的数据
+            Loaded data.
         """
         with open(filepath, 'r') as f:
             return yaml.safe_load(f)
@@ -209,14 +208,14 @@ class IOUtils:
     @staticmethod
     def save_yaml(data: Dict[str, Any], filepath: str):
         """
-        将数据保存为 YAML 文件。
+        Save data to a YAML file.
         
-        参数
+        Parameters
         ----------
         data : Dict[str, Any]
-            要保存的数据
+            Data to save.
         filepath : str
-            YAML 文件的保存路径
+            Path of the YAML file to write.
         """
         with open(filepath, 'w') as f:
             yaml.dump(data, f, default_flow_style=False)
@@ -224,17 +223,17 @@ class IOUtils:
     @staticmethod
     def load_pickle(filepath: str) -> Any:
         """
-        从 pickle 文件加载数据。
+        Load an object from a pickle file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            pickle 文件路径
+            Path to the pickle file.
             
-        返回
+        Returns
         -------
         Any
-            加载的对象
+            Loaded object.
         """
         with open(filepath, 'rb') as f:
             return pickle.load(f)
@@ -242,14 +241,14 @@ class IOUtils:
     @staticmethod
     def save_pickle(obj: Any, filepath: str):
         """
-        将对象保存为 pickle 文件。
+        Save an object to a pickle file.
         
-        参数
+        Parameters
         ----------
         obj : Any
-            要保存的对象
+            Object to save.
         filepath : str
-            pickle 文件的保存路径
+            Path of the pickle file to write.
         """
         with open(filepath, 'wb') as f:
             pickle.dump(obj, f)
@@ -257,17 +256,17 @@ class IOUtils:
     @staticmethod
     def load_basis_set(filepath: str) -> 'BasisSet':
         """
-        从文件加载基集合。
+        Load a basis set from a file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            基集合文件路径
+            Path to the basis-set file.
             
-        返回
+        Returns
         -------
         BasisSet
-            加载的基集合
+            Loaded basis set.
         """
         from ..core.basis_container import BasisSet, BasisInfo
         
@@ -279,7 +278,7 @@ class IOUtils:
                 name=basis_data['name'],
                 dim=basis_data['dim'],
                 params=basis_data.get('params'),
-                func=basis_data.get('func'),  # 注意：函数可能无法很好地序列化
+                func=basis_data.get('func'),  # Note: callables may not pickle reliably
                 factors=basis_data.get('factors'),
             )
             basis_set.add_basis(basis_info)
@@ -289,14 +288,14 @@ class IOUtils:
     @staticmethod
     def save_basis_set(basis_set: 'BasisSet', filepath: str):
         """
-        将基集合保存到文件。
+        Save a basis set to a file.
         
-        参数
+        Parameters
         ----------
         basis_set : BasisSet
-            要保存的基集合
+            Basis set to save.
         filepath : str
-            基集合文件的保存路径
+            Path of the basis-set file to write.
         """
         data = []
         for basis in basis_set.bases:
@@ -314,33 +313,33 @@ class IOUtils:
     @staticmethod
     def load_solver_state(filepath: str) -> Dict[str, Any]:
         """
-        从文件加载求解器状态。
+        Load a solver state from a file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            求解器状态文件路径
+            Path to the solver-state file.
             
-        返回
+        Returns
         -------
         Dict[str, Any]
-            求解器状态
+            Solver state.
         """
         return IOUtils.load_pickle(filepath)
     
     @staticmethod
     def save_solver_state(solver: Any, filepath: str):
         """
-        将求解器状态保存到文件。
+        Save a solver state to a file.
         
-        参数
+        Parameters
         ----------
         solver : Any
-            要保存的求解器对象
+            Solver object whose state is saved.
         filepath : str
-            求解器状态文件的保存路径
+            Path of the solver-state file to write.
         """
-        # 提取相关状态
+        # Collect the relevant solver attributes
         state = {
             'coefficients': solver.coefficients if hasattr(solver, 'coefficients') else None,
             'basis_set': solver.basis_set if hasattr(solver, 'basis_set') else None,
@@ -357,40 +356,39 @@ class IOUtils:
     def generate_sample_data(n_points: int = 100, n_dims: int = 1, 
                             noise_std: float = 0.1) -> Tuple[MultiDimData, np.ndarray]:
         """
-        生成用于测试的示例数据。
+        Generate sample data for testing.
         
-        参数
+        Parameters
         ----------
-        n_points : int, 默认=100
-            数据点数量
-        n_dims : int, 默认=1
-            维度数量
-        noise_std : float, 默认=0.1
-            噪声的标准差
+        n_points : int, default=100
+            Number of data points.
+        n_dims : int, default=1
+            Number of dimensions.
+        noise_std : float, default=0.1
+            Standard deviation of the additive noise.
             
-        返回
+        Returns
         -------
         Tuple[MultiDimData, np.ndarray]
-            数据容器和目标值
+            Data container and target values.
         """
-        # 生成维度数据
+        # Generate the dimension coordinates
         dim_data = {}
         for i in range(n_dims):
             dim_data[i] = np.linspace(0, 1, n_points)
         
         data = MultiDimData(dim_data)
         
-        # 生成目标值（带噪声的正弦函数）
+        # Target: sine function with additive noise
         if n_dims == 1:
             x = dim_data[0]
             y_true = np.sin(2 * np.pi * x)
         else:
-            # 多维：正弦函数的乘积
+            # Multi-dimensional: product of sine functions
             y_true = np.ones(n_points)
             for i in range(n_dims):
                 y_true *= np.sin(2 * np.pi * dim_data[i])
         
-        # 添加噪声
         y = y_true + noise_std * np.random.randn(n_points)
         
         return data, y
@@ -398,14 +396,14 @@ class IOUtils:
     @staticmethod
     def export_to_matlab(data: MultiDimData, filepath: str):
         """
-        将数据导出为 MATLAB .mat 文件。
+        Export data to a MATLAB .mat file.
         
-        参数
+        Parameters
         ----------
         data : MultiDimData
-            要导出的数据容器
+            Data container to export.
         filepath : str
-            .mat 文件的保存路径
+            Path of the .mat file to write.
         """
         try:
             from scipy.io import savemat
@@ -424,31 +422,31 @@ class IOUtils:
     @staticmethod
     def import_from_matlab(filepath: str) -> MultiDimData:
         """
-        从 MATLAB .mat 文件导入数据。
+        Import data from a MATLAB .mat file.
         
-        参数
+        Parameters
         ----------
         filepath : str
-            .mat 文件路径
+            Path to the .mat file.
             
-        返回
+        Returns
         -------
         MultiDimData
-            导入的数据容器
+            Imported data container.
         """
         try:
             from scipy.io import loadmat
             
             mat_data = loadmat(filepath)
             
-            # 查找维度数组
+            # Collect 1-D arrays as dimension columns
             dim_data = {}
             dim_idx = 0
             
             for key, value in mat_data.items():
                 if not key.startswith('__') and isinstance(value, np.ndarray):
                     if value.ndim == 1 or (value.ndim == 2 and value.shape[1] == 1):
-                        # 展平为一维
+                        # Flatten column vectors to 1-D
                         value = value.flatten()
                         dim_data[dim_idx] = value
                         dim_idx += 1

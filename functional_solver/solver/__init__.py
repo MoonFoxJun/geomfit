@@ -1,4 +1,4 @@
-"""函数求解器的求解器模块。"""
+"""Solver module of the functional solver package."""
 
 from .functional_solver import FunctionalSolver
 from .gram_solver import GramSolver

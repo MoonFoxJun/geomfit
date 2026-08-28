@@ -1,82 +1,78 @@
-"""加权内积的权重函数。"""
+"""Weight functions for weighted inner products."""
 
 import numpy as np
 from typing import Callable, Dict, Any, Union
 
-# numpy>=2.0 已将 np.trapz 改名为 np.trapezoid；此处保持与 numpy 1.x 兼容
+# numpy>=2.0 renamed np.trapz to np.trapezoid; keep compatibility with numpy 1.x
 try:
     _trapz = np.trapezoid
 except AttributeError:
     _trapz = np.trapz
 
 class WeightFunction:
-    """加权内积的权重函数。"""
-    
+    """Weight function for a weighted inner product."""
+
     def __init__(self, weight_func: Callable):
         """
-        初始化权重函数。
-        
-        参数
-        ----
+        Initialize the weight function.
+
+        Parameters
+        ----------
         weight_func : Callable
-            返回某一点或索引处权重的函数
-            签名：weight_func(x) -> float 或 np.ndarray
+            Function returning the weight at a point or index.
+            Signature: weight_func(x) -> float or np.ndarray.
         """
         self.weight_func = weight_func
-    
+
     def __call__(self, x: Union[float, np.ndarray, Dict[int, float]]) -> Union[float, np.ndarray]:
         """
-        求值权重函数。
-        
-        参数
-        ----
+        Evaluate the weight function.
+
+        Parameters
+        ----------
         x : Union[float, np.ndarray, Dict[int, float]]
-            输入的点（或点的集合）
-            
-        返回
-        ----
+            Input point (or collection of points).
+
+        Returns
+        -------
         Union[float, np.ndarray]
-            权重值（或权重值数组）
+            Weight value (or array of weight values).
         """
         return self.weight_func(x)
-    
+
     @staticmethod
     def constant(c: float = 1.0) -> 'WeightFunction':
-        """常量权重函数。"""
+        """Constant weight function."""
         def weight_func(x):
             if isinstance(x, dict):
-                # 对于字典形式的点，返回常量
                 return c
             elif isinstance(x, np.ndarray):
-                # 对于数组，返回常量组成的数组
                 return np.full_like(x, c, dtype=float)
             else:
-                # 对于标量
                 return c
-        
+
         return WeightFunction(weight_func)
-    
+
     @staticmethod
     def exponential(alpha: float = 1.0) -> 'WeightFunction':
-        """指数权重函数 w(x) = exp(-α|x|)。"""
+        """Exponential weight function w(x) = exp(-α|x|)."""
         def weight_func(x):
             if isinstance(x, dict):
-                # 对于字典形式的点，计算范数
                 norm = np.sqrt(sum(val ** 2 for val in x.values()))
                 return np.exp(-alpha * norm)
             elif isinstance(x, np.ndarray):
                 return np.exp(-alpha * np.abs(x))
             else:
                 return np.exp(-alpha * np.abs(x))
-        
+
         return WeightFunction(weight_func)
-    
+
     @staticmethod
     def gaussian(sigma: float = 1.0, center: float = 0.0) -> 'WeightFunction':
-        """高斯权重函数 w(x) = exp(-(x - center)²/(2σ²))。"""
+        """Gaussian weight function w(x) = exp(-(x - center)²/(2σ²))."""
         def weight_func(x):
             if isinstance(x, dict):
-                # 对于字典形式的点，使用第一个维度
+                # use the first dimension for dict points
                 if x:
                     first_key = list(x.keys())[0]
                     x_val = x[first_key]
@@ -87,32 +83,31 @@ class WeightFunction:
                 return np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
             else:
                 return np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
-        
+
         return WeightFunction(weight_func)
-    
+
     @staticmethod
     def polynomial(degree: int = 2, coef: float = 1.0) -> 'WeightFunction':
-        """多项式权重函数 w(x) = 1/(1 + coef * |x|^degree)。"""
+        """Polynomial weight function w(x) = 1/(1 + coef * |x|^degree)."""
         def weight_func(x):
             if isinstance(x, dict):
-                # 对于字典形式的点，计算范数
                 norm = np.sqrt(sum(val ** 2 for val in x.values()))
                 return 1.0 / (1.0 + coef * (norm ** degree))
             elif isinstance(x, np.ndarray):
                 return 1.0 / (1.0 + coef * (np.abs(x) ** degree))
             else:
                 return 1.0 / (1.0 + coef * (np.abs(x) ** degree))
-        
+
         return WeightFunction(weight_func)
-    
+
     @staticmethod
     def chebyshev_weight(kind: str = "first") -> 'WeightFunction':
-        """用于正交多项式的 Chebyshev 权重函数。"""
+        """Chebyshev weight function for orthogonal polynomials."""
         if kind == "first":
-            # w(x) = 1/√(1 - x²)，其中 x ∈ (-1, 1)
+            # w(x) = 1/√(1 - x²), for x ∈ (-1, 1)
             def weight_func(x):
                 if isinstance(x, dict):
-                    # 使用第一个维度
+                    # use the first dimension for dict points
                     if x:
                         first_key = list(x.keys())[0]
                         x_val = x[first_key]
@@ -133,7 +128,7 @@ class WeightFunction:
                     else:
                         return 0.0
         elif kind == "second":
-            # w(x) = √(1 - x²)，其中 x ∈ (-1, 1)
+            # w(x) = √(1 - x²), for x ∈ (-1, 1)
             def weight_func(x):
                 if isinstance(x, dict):
                     if x:
@@ -157,31 +152,31 @@ class WeightFunction:
                         return 0.0
         else:
             raise ValueError(f"Unknown Chebyshev kind: {kind}")
-        
+
         return WeightFunction(weight_func)
-    
+
     @staticmethod
     def custom(func: Callable) -> 'WeightFunction':
-        """自定义权重函数。"""
+        """Custom weight function."""
         return WeightFunction(func)
-    
+
     def integrate(self, a: float, b: float, n_points: int = 1000) -> float:
         """
-        在区间上对权重函数求积分。
-        
-        参数
-        ----
+        Integrate the weight function over an interval.
+
+        Parameters
+        ----------
         a : float
-            下界
+            Lower bound.
         b : float
-            上界
-        n_points : int, 默认=1000
-            数值积分的采样点数
-            
-        返回
-        ----
+            Upper bound.
+        n_points : int, default=1000
+            Number of sampling points for the numerical integration.
+
+        Returns
+        -------
         float
-            近似积分 ∫[a,b] w(x) dx
+            Approximate integral ∫[a,b] w(x) dx.
         """
         x = np.linspace(a, b, n_points)
         w = self(x)

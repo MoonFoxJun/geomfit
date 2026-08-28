@@ -1,138 +1,131 @@
-"""适用于不适定问题的正则化方法。"""
+"""Regularization methods for ill-posed problems."""
 
 import numpy as np
 from typing import Dict, Any, Optional, Tuple
 
 class Regularization:
-    """用于求解不适定问题的正则化方法。"""
-    
+    """Regularization methods for solving ill-posed problems."""
+
     @staticmethod
     def tikhonov(G: np.ndarray, alpha: float = 1e-6) -> np.ndarray:
         """
-        应用 Tikhonov 正则化。
-        
-        参数
-        ----
+        Apply Tikhonov regularization.
+
+        Parameters
+        ----------
         G : np.ndarray
-            Gram 矩阵
-        alpha : float, 默认=1e-6
-            正则化参数
-            
-        返回
-        ----
+            Gram matrix.
+        alpha : float, default=1e-6
+            Regularization parameter.
+
+        Returns
+        -------
         np.ndarray
-            正则化后的矩阵 G + αI
+            Regularized matrix G + αI.
         """
         n = G.shape[0]
         return G + alpha * np.eye(n)
-    
+
     @staticmethod
     def ridge(G: np.ndarray, alpha: float = 1e-6) -> np.ndarray:
-        """Tikhonov 正则化的别名。"""
+        """Alias of Tikhonov regularization (ridge regression)."""
         return Regularization.tikhonov(G, alpha)
-    
+
     @staticmethod
     def truncated_svd(G: np.ndarray, threshold: float = 1e-10) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        计算截断 SVD 正则化。
-        
-        参数
-        ----
+        Compute a truncated-SVD regularization.
+
+        Parameters
+        ----------
         G : np.ndarray
-            Gram 矩阵
-        threshold : float, 默认=1e-10
-            奇异值阈值
-            
-        返回
-        ----
+            Gram matrix.
+        threshold : float, default=1e-10
+            Singular value threshold.
+
+        Returns
+        -------
         Tuple[np.ndarray, np.ndarray, np.ndarray]
-            去除小奇异值后的 U、S、Vh 矩阵
+            U, S, Vh with small singular values removed.
         """
         U, s, Vh = np.linalg.svd(G, full_matrices=False)
-        
-        # 截断较小的奇异值
+
+        # Truncate small singular values
         mask = s > threshold
         U_trunc = U[:, mask]
         s_trunc = s[mask]
         Vh_trunc = Vh[mask, :]
-        
+
         return U_trunc, s_trunc, Vh_trunc
-    
+
     @staticmethod
-    def solve_regularized(G: np.ndarray, b: np.ndarray, method: str = "tikhonov", 
+    def solve_regularized(G: np.ndarray, b: np.ndarray, method: str = "tikhonov",
                          **kwargs) -> np.ndarray:
         """
-        求解正则化线性方程组 Gx = b。
-        
-        参数
-        ----
+        Solve the regularized linear system Gx = b.
+
+        Parameters
+        ----------
         G : np.ndarray
-            Gram 矩阵
+            Gram matrix.
         b : np.ndarray
-            右端向量
-        method : str, 默认="tikhonov"
-            正则化方法："tikhonov"、"svd" 或 "lstsq"
+            Right-hand-side vector.
+        method : str, default="tikhonov"
+            Regularization method: "tikhonov", "svd", or "lstsq".
         **kwargs
-            正则化的附加参数
-            
-        返回
-        ----
+            Additional arguments for the regularization method.
+
+        Returns
+        -------
         np.ndarray
-            解向量 x
+            Solution vector x.
         """
         if method == "tikhonov":
             alpha = kwargs.get("alpha", 1e-6)
             G_reg = Regularization.tikhonov(G, alpha)
             return np.linalg.solve(G_reg, b)
-        
+
         elif method == "svd":
             threshold = kwargs.get("threshold", 1e-10)
             U, s, Vh = Regularization.truncated_svd(G, threshold)
-            
-            # 使用截断 SVD 求解
+
+            # Solve with the truncated SVD: x = V Σ⁻¹ Uᵀ b
             s_inv = 1.0 / s
             x = Vh.T @ (s_inv * (U.T @ b))
             return x
-        
+
         elif method == "lstsq":
             rcond = kwargs.get("rcond", None)
             x, residuals, rank, s = np.linalg.lstsq(G, b, rcond=rcond)
             return x
-        
+
         else:
             raise ValueError(f"Unknown regularization method: {method}")
-    
+
     @staticmethod
     def check_singularity(G: np.ndarray, threshold: float = 1e-10) -> Dict[str, Any]:
         """
-        检查 Gram 矩阵是否奇异或病态。
-        
-        参数
-        ----
+        Check whether the Gram matrix is singular or ill-conditioned.
+
+        Parameters
+        ----------
         G : np.ndarray
-            Gram 矩阵
-        threshold : float, 默认=1e-10
-            奇异值阈值
-            
-        返回
-        ----
+            Gram matrix.
+        threshold : float, default=1e-10
+            Singular value threshold.
+
+        Returns
+        -------
         Dict[str, Any]
-            奇异性信息
+            Singularity information.
         """
-        # 计算条件数
         cond = np.linalg.cond(G)
-        
-        # 计算奇异值
         s = np.linalg.svd(G, compute_uv=False)
-        
-        # 检查奇异性
         min_sv = np.min(s)
         max_sv = np.max(s)
         is_singular = min_sv < threshold
-        
-        # 计算秩
         rank = np.sum(s > threshold)
-        
+
         return {
             "is_singular": is_singular,
             "condition_number": cond,
@@ -142,122 +135,120 @@ class Regularization:
             "size": G.shape[0],
             "threshold": threshold
         }
-    
+
     @staticmethod
-    def lasso_regularization(G: np.ndarray, b: np.ndarray, alpha: float = 1e-3, 
+    def lasso_regularization(G: np.ndarray, b: np.ndarray, alpha: float = 1e-3,
                             max_iter: int = 1000, tol: float = 1e-6) -> np.ndarray:
         """
-        使用坐标下降应用 LASSO 正则化（L1 惩罚）。
-        
-        参数
-        ----
+        Apply LASSO regularization (L1 penalty) via coordinate descent.
+
+        Parameters
+        ----------
         G : np.ndarray
-            Gram 矩阵
+            Gram matrix.
         b : np.ndarray
-            右端向量
-        alpha : float, 默认=1e-3
-            正则化参数
-        max_iter : int, 默认=1000
-            最大迭代次数
-        tol : float, 默认=1e-6
-            收敛容差
-            
-        返回
-        ----
+            Right-hand-side vector.
+        alpha : float, default=1e-3
+            Regularization parameter.
+        max_iter : int, default=1000
+            Maximum number of iterations.
+        tol : float, default=1e-6
+            Convergence tolerance.
+
+        Returns
+        -------
         np.ndarray
-            解向量 x
+            Solution vector x.
         """
         n = G.shape[0]
         x = np.zeros(n)
-        
-        # 预计算 G 的对角线
+
+        # Precompute the diagonal of G
         diag_G = np.diag(G)
-        
+
         for iteration in range(max_iter):
             x_old = x.copy()
-            
-            # 坐标下降
+
+            # Coordinate descent
             for j in range(n):
-                # 计算去掉第 j 个分量后的残差
+                # Residual with the j-th component removed
                 r_j = b - G @ x + G[:, j] * x[j]
-                
-                # 更新第 j 个分量
+
                 numerator = np.dot(G[:, j], r_j)
                 denominator = diag_G[j]
-                
-                # 软阈值
+
+                # Soft thresholding
                 if numerator > alpha:
                     x[j] = (numerator - alpha) / denominator
                 elif numerator < -alpha:
                     x[j] = (numerator + alpha) / denominator
                 else:
                     x[j] = 0.0
-            
-            # 检查收敛
+
+            # Convergence check
             if np.linalg.norm(x - x_old) < tol:
                 break
-        
+
         return x
-    
+
     @staticmethod
-    def elastic_net(G: np.ndarray, b: np.ndarray, alpha: float = 1e-3, 
+    def elastic_net(G: np.ndarray, b: np.ndarray, alpha: float = 1e-3,
                    l1_ratio: float = 0.5, max_iter: int = 1000, tol: float = 1e-6) -> np.ndarray:
         """
-        应用弹性网正则化（L1 + L2 惩罚）。
-        
-        参数
-        ----
+        Apply elastic net regularization (L1 + L2 penalty).
+
+        Parameters
+        ----------
         G : np.ndarray
-            Gram 矩阵
+            Gram matrix.
         b : np.ndarray
-            右端向量
-        alpha : float, 默认=1e-3
-            总正则化参数
-        l1_ratio : float, 默认=0.5
-            L1 惩罚所占比例（0 为 ridge，1 为 lasso）
-        max_iter : int, 默认=1000
-            最大迭代次数
-        tol : float, 默认=1e-6
-            收敛容差
-            
-        返回
-        ----
+            Right-hand-side vector.
+        alpha : float, default=1e-3
+            Total regularization parameter.
+        l1_ratio : float, default=0.5
+            Proportion of the L1 penalty (0 is ridge, 1 is lasso).
+        max_iter : int, default=1000
+            Maximum number of iterations.
+        tol : float, default=1e-6
+            Convergence tolerance.
+
+        Returns
+        -------
         np.ndarray
-            解向量 x
+            Solution vector x.
         """
         n = G.shape[0]
         x = np.zeros(n)
-        
-        # 将 alpha 拆分为 L1 与 L2 两部分
+
+        # Split alpha into L1 and L2 parts
         alpha_l1 = alpha * l1_ratio
         alpha_l2 = alpha * (1 - l1_ratio)
-        
-        # 预计算用于 L2 正则化的修正 Gram 矩阵
+
+        # Gram matrix pre-modified by the L2 regularization
         G_mod = G + alpha_l2 * np.eye(n)
         diag_G_mod = np.diag(G_mod)
-        
+
         for iteration in range(max_iter):
             x_old = x.copy()
-            
-            # 坐标下降
+
+            # Coordinate descent
             for j in range(n):
-                # 计算去掉第 j 个分量后的残差
+                # Residual with the j-th component removed
                 r_j = b - G_mod @ x + G_mod[:, j] * x[j]
-                
-                # 使用软阈值更新第 j 个分量
+
                 numerator = np.dot(G_mod[:, j], r_j)
                 denominator = diag_G_mod[j]
-                
-                # 对 L1 惩罚做软阈值处理
+
+                # Soft thresholding for the L1 penalty
                 if numerator > alpha_l1:
                     x[j] = (numerator - alpha_l1) / denominator
                 elif numerator < -alpha_l1:
                     x[j] = (numerator + alpha_l1) / denominator
                 else:
                     x[j] = 0.0
-            
-            # 检查收敛
+
+            # Convergence check
             if np.linalg.norm(x - x_old) < tol:
                 break
-        
+
         return x

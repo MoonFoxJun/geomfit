@@ -1,4 +1,4 @@
-"""功能求解器的核心数据结构。"""
+"""Core data structures of the functional solver."""
 
 from .data_container import MultiDimData
 from .basis_container import BasisSet, BasisInfo

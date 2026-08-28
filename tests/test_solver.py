@@ -1,4 +1,4 @@
-"""测试解算器"""
+"""Tests for the solvers."""
 
 import sys
 import os
@@ -15,126 +15,126 @@ from functional_solver.solver.kernel_solver import KernelSolver
 from functional_solver.kernel.rbf import RBFKernel
 
 def test_functional_solver_basis_method():
-    """测试FunctionalSolver的基函数方法"""
-    # 创建解算器
+    """Test the FunctionalSolver basis method."""
+    # Create a solver
     solver = FunctionalSolver()
     
-    # 创建基函数集合
+    # Create a basis set
     basis_set = BasisSet()
     for order in range(5):
         basis_set.add_basis(BasisFactory.polynomial(dim=0, order=order))
     
-    # 设置基函数
+    # Set the basis
     solver.set_basis(basis_set)
     
-    # 创建内积
+    # Create an inner product
     inner_product = InnerProduct(is_continuous=False)
     solver.set_inner_product(inner_product)
     
-    # 创建数据
+    # Create data
     x = np.linspace(0, 1, 50)
     y_true = np.sin(2 * np.pi * x)
-    y = y_true + 0.1 * np.random.randn(len(x))  # 添加噪声
+    y = y_true + 0.1 * np.random.randn(len(x))  # add noise
     
     data = MultiDimData({0: x})
     
-    # 加载数据
+    # Load data
     solver.load_data(data, y)
     
-    # 求解（无正则化）
+    # Solve (no regularization)
     coefficients = solver.solve()
     assert coefficients.shape == (5,)
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     assert y_pred.shape == (50,)
     
-    # 计算均方误差
+    # Compute the mean squared error
     mse = np.mean((y_pred - y)**2)
-    assert mse < 0.05  # 误差应该较小
+    assert mse < 0.05  # the error should be small
     
-    # 获取调试信息
+    # Retrieve debug information
     debug_info = solver.get_debug_info()
     assert "method" in debug_info
     assert debug_info["method"] == "basis"
 
 def test_functional_solver_kernel_method():
-    """测试FunctionalSolver的核方法"""
-    # 创建解算器
+    """Test the FunctionalSolver kernel method."""
+    # Create a solver
     solver = FunctionalSolver()
     
-    # 创建核函数
+    # Create a kernel
     kernel = RBFKernel(sigma=1.0)
     solver.set_kernel(kernel)
     
-    # 创建数据
+    # Create data
     x = np.linspace(0, 1, 30)
     y_true = np.sin(2 * np.pi * x)
     y = y_true + 0.1 * np.random.randn(len(x))
     
     data = MultiDimData({0: x})
     
-    # 加载数据
+    # Load data
     solver.load_data(data, y)
     
-    # 求解
+    # Solve
     coefficients = solver.solve()
-    assert coefficients.shape == (30,)  # 核方法系数数量等于数据点数量
+    assert coefficients.shape == (30,)  # kernel coefficients equal the number of data points
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     assert y_pred.shape == (30,)
     
-    # 计算均方误差
+    # Compute the mean squared error
     mse = np.mean((y_pred - y)**2)
-    assert mse < 0.1  # 核方法应该能很好拟合
+    assert mse < 0.1  # the kernel method should fit well
     
-    # 获取调试信息
+    # Retrieve debug information
     debug_info = solver.get_debug_info()
     assert "method" in debug_info
     assert debug_info["method"] == "kernel"
 
 def test_functional_solver_regularization():
-    """测试FunctionalSolver的正则化"""
-    # 创建解算器
+    """Test FunctionalSolver regularization."""
+    # Create a solver
     solver = FunctionalSolver()
     
-    # 创建基函数集合（使用高阶多项式，容易过拟合）
+    # Create a basis set of high-order polynomials (prone to overfitting)
     basis_set = BasisSet()
-    for order in range(15):  # 高阶多项式
+    for order in range(15):  # high-order polynomials
         basis_set.add_basis(BasisFactory.polynomial(dim=0, order=order))
     
     solver.set_basis(basis_set)
     
-    # 创建内积
+    # Create an inner product
     inner_product = InnerProduct(is_continuous=False)
     solver.set_inner_product(inner_product)
     
-    # 创建数据
+    # Create data
     x = np.linspace(0, 1, 20)
     y_true = np.sin(2 * np.pi * x)
-    y = y_true + 0.2 * np.random.randn(len(x))  # 较大噪声
+    y = y_true + 0.2 * np.random.randn(len(x))  # larger noise
     
     data = MultiDimData({0: x})
     solver.load_data(data, y)
     
-    # 无正则化求解
+    # Solve without regularization
     coeff_no_reg = solver.solve()
     
-    # 带正则化求解
+    # Solve with regularization
     regularization = {"method": "tikhonov", "alpha": 1e-3}
     coeff_with_reg = solver.solve(regularization=regularization)
     
-    # 正则化后的系数范数应该更小
+    # The regularized coefficient norm should be smaller
     norm_no_reg = np.linalg.norm(coeff_no_reg)
     norm_with_reg = np.linalg.norm(coeff_with_reg)
     assert norm_with_reg < norm_no_reg
 
 def test_functional_solver_reset():
-    """测试FunctionalSolver的重置功能"""
+    """Test the FunctionalSolver reset."""
     solver = FunctionalSolver()
     
-    # 设置一些状态
+    # Set up some state
     basis_set = BasisSet()
     basis_set.add_basis(BasisFactory.polynomial(dim=0, order=0))
     solver.set_basis(basis_set)
@@ -147,13 +147,13 @@ def test_functional_solver_reset():
     data = MultiDimData({0: x})
     solver.load_data(data, y)
     
-    # 求解
+    # Solve
     solver.solve()
     
-    # 重置
+    # Reset
     solver.reset()
     
-    # 验证状态已重置
+    # Verify that the state has been reset
     assert solver.basis_set is None
     assert solver.inner_product is None
     assert solver.data is None
@@ -162,134 +162,134 @@ def test_functional_solver_reset():
     assert solver.debug_info == {}
 
 def test_gram_solver_basic():
-    """测试GramSolver基本功能"""
-    # 创建基函数集合
+    """Test basic GramSolver functionality."""
+    # Create a basis set
     basis_set = BasisSet()
     for order in range(3):
         basis_set.add_basis(BasisFactory.polynomial(dim=0, order=order))
     
-    # 创建内积
+    # Create an inner product
     inner_product = InnerProduct(is_continuous=False)
     
-    # 创建Gram解算器
+    # Create a Gram solver
     solver = GramSolver(basis_set, inner_product)
     
-    # 创建数据
+    # Create data
     x = np.linspace(0, 1, 20)
     y = np.sin(2 * np.pi * x) + 0.1 * np.random.randn(len(x))
     data = MultiDimData({0: x})
     
-    # 加载数据
+    # Load data
     solver.load_data(data, y)
     
-    # 计算Gram矩阵
+    # Compute the Gram matrix
     G = solver.compute_gram_matrix()
     assert G.shape == (3, 3)
-    assert np.allclose(G, G.T)  # 对称
+    assert np.allclose(G, G.T)  # symmetric
     
-    # 计算右端项
+    # Compute the right-hand side
     b = solver.compute_rhs()
     assert b.shape == (3,)
     
-    # 求解
+    # Solve
     coefficients = solver.solve()
     assert coefficients.shape == (3,)
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     assert y_pred.shape == (20,)
     
-    # 计算条件数
+    # Compute the condition number
     cond = solver.get_condition_number()
     assert cond > 0
     
-    # 计算奇异值
+    # Compute the singular values
     sv = solver.get_singular_values()
     assert len(sv) == 3
     assert np.all(sv >= 0)
 
 def test_kernel_solver_basic():
-    """测试KernelSolver基本功能"""
-    # 创建核函数
+    """Test basic KernelSolver functionality."""
+    # Create a kernel
     kernel = RBFKernel(sigma=1.0)
     
-    # 创建核解算器
+    # Create a kernel solver
     solver = KernelSolver(kernel)
     
-    # 创建数据
+    # Create data
     x = np.linspace(0, 1, 20)
     y = np.sin(2 * np.pi * x) + 0.1 * np.random.randn(len(x))
     data = MultiDimData({0: x})
     
-    # 加载数据
+    # Load data
     solver.load_data(data, y)
     
-    # 计算核矩阵
+    # Compute the kernel matrix
     K = solver.compute_kernel_matrix()
     assert K.shape == (20, 20)
-    assert np.allclose(K, K.T)  # 对称
+    assert np.allclose(K, K.T)  # symmetric
     
-    # 求解
+    # Solve
     coefficients = solver.solve()
     assert coefficients.shape == (20,)
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     assert y_pred.shape == (20,)
     
-    # 高效预测
+    # Efficient prediction
     y_pred_eff = solver.predict_efficient(data)
     assert y_pred_eff.shape == (20,)
     assert np.allclose(y_pred, y_pred_eff, rtol=1e-10)
     
-    # 计算条件数
+    # Compute the condition number
     cond = solver.get_condition_number()
     assert cond > 0
     
-    # 计算特征值
+    # Compute the eigenvalues
     eigenvalues = solver.get_eigenvalues()
     assert len(eigenvalues) == 20
-    assert np.all(eigenvalues >= 0)  # 核矩阵半正定
+    assert np.all(eigenvalues >= 0)  # the kernel matrix is positive semi-definite
     
-    # 计算函数范数
+    # Compute the function norm
     norm = solver.compute_function_norm()
     assert norm >= 0
 
 def test_kernel_solver_regularization():
-    """测试KernelSolver的正则化"""
-    # 创建核函数
+    """Test KernelSolver regularization."""
+    # Create a kernel
     kernel = RBFKernel(sigma=0.5)
     
-    # 创建核解算器
+    # Create a kernel solver
     solver = KernelSolver(kernel)
     
-    # 创建数据
+    # Create data
     x = np.linspace(0, 1, 15)
     y = np.sin(2 * np.pi * x) + 0.2 * np.random.randn(len(x))
     data = MultiDimData({0: x})
     solver.load_data(data, y)
     
-    # 无正则化求解
+    # Solve without regularization
     coeff_no_reg = solver.solve()
     
-    # 带正则化求解
+    # Solve with regularization
     regularization = {"alpha": 1e-3}
     coeff_with_reg = solver.solve(regularization=regularization)
     
-    # 正则化后的系数范数应该更小
+    # The regularized coefficient norm should be smaller
     norm_no_reg = np.linalg.norm(coeff_no_reg)
     norm_with_reg = np.linalg.norm(coeff_with_reg)
     assert norm_with_reg < norm_no_reg
 
 def test_solver_comparison():
-    """测试不同解算器的比较"""
-    # 创建数据
+    """Test comparison across solvers."""
+    # Create data
     x = np.linspace(0, 1, 30)
     y_true = np.sin(2 * np.pi * x)
     y = y_true + 0.1 * np.random.randn(len(x))
     data = MultiDimData({0: x})
     
-    # 测试1: FunctionalSolver with basis
+    # Solver 1: FunctionalSolver with basis
     solver1 = FunctionalSolver()
     basis_set = BasisSet()
     for order in range(5):
@@ -301,7 +301,7 @@ def test_solver_comparison():
     y_pred1 = solver1.predict(data)
     mse1 = np.mean((y_pred1 - y)**2)
     
-    # 测试2: FunctionalSolver with kernel
+    # Solver 2: FunctionalSolver with kernel
     solver2 = FunctionalSolver()
     kernel = RBFKernel(sigma=1.0)
     solver2.set_kernel(kernel)
@@ -310,47 +310,47 @@ def test_solver_comparison():
     y_pred2 = solver2.predict(data)
     mse2 = np.mean((y_pred2 - y)**2)
     
-    # 测试3: GramSolver
+    # Solver 3: GramSolver
     solver3 = GramSolver(basis_set, InnerProduct(is_continuous=False))
     solver3.load_data(data, y)
     coeff3 = solver3.solve()
     y_pred3 = solver3.predict(data)
     mse3 = np.mean((y_pred3 - y)**2)
     
-    # 测试4: KernelSolver
+    # Solver 4: KernelSolver
     solver4 = KernelSolver(kernel)
     solver4.load_data(data, y)
     coeff4 = solver4.solve()
     y_pred4 = solver4.predict(data)
     mse4 = np.mean((y_pred4 - y)**2)
     
-    # 验证所有解算器都能得到合理的结果
+    # All solvers should produce reasonable results
     assert mse1 < 0.05
     assert mse2 < 0.05
     assert mse3 < 0.05
     assert mse4 < 0.05
     
-    # FunctionalSolver with basis 和 GramSolver 应该得到相同的结果
+    # FunctionalSolver with basis and GramSolver should agree
     assert np.allclose(coeff1, coeff3, rtol=1e-10)
     assert np.allclose(y_pred1, y_pred3, rtol=1e-10)
     
-    # FunctionalSolver with kernel 和 KernelSolver 应该得到相同的结果
+    # FunctionalSolver with kernel and KernelSolver should agree
     assert np.allclose(coeff2, coeff4, rtol=1e-10)
     assert np.allclose(y_pred2, y_pred4, rtol=1e-10)
 
 def test_solver_with_new_data():
-    """测试解算器对新数据的预测"""
-    # 训练数据
+    """Test prediction on new data."""
+    # Training data
     x_train = np.linspace(0, 1, 20)
     y_train = np.sin(2 * np.pi * x_train) + 0.1 * np.random.randn(len(x_train))
     train_data = MultiDimData({0: x_train})
     
-    # 测试数据
+    # Test data
     x_test = np.linspace(0.1, 0.9, 15)
     y_test_true = np.sin(2 * np.pi * x_test)
     test_data = MultiDimData({0: x_test})
     
-    # 使用FunctionalSolver with basis
+    # Use FunctionalSolver with basis
     solver = FunctionalSolver()
     basis_set = BasisSet()
     for order in range(5):
@@ -360,15 +360,15 @@ def test_solver_with_new_data():
     solver.load_data(train_data, y_train)
     solver.solve()
     
-    # 对测试数据进行预测
+    # Predict on test data
     y_test_pred = solver.predict(test_data)
     
-    # 验证预测形状
+    # Verify the prediction shape
     assert y_test_pred.shape == (15,)
     
-    # 计算测试误差
+    # Compute the test error
     test_mse = np.mean((y_test_pred - y_test_true)**2)
-    assert test_mse < 0.2  # 测试误差应该合理
+    assert test_mse < 0.2  # the test error should be reasonable
 
 if __name__ == "__main__":
     test_functional_solver_basis_method()
@@ -398,4 +398,4 @@ if __name__ == "__main__":
     test_solver_with_new_data()
     print("✓ test_solver_with_new_data passed")
     
-    print("\n所有解算器测试通过！")
+    print("\nAll solver tests passed!")

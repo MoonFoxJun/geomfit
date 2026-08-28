@@ -1,4 +1,4 @@
-"""RKHS核函数示例"""
+"""RKHS kernel demo"""
 
 import sys
 import os
@@ -19,71 +19,71 @@ from functional_solver.solver.functional_solver import FunctionalSolver
 from functional_solver.solver.kernel_solver import KernelSolver
 
 def demo_rbf_kernel():
-    """RBF核函数示例"""
+    """RBF kernel demo"""
     print("=" * 60)
-    print("RBF核函数示例")
+    print("RBF kernel demo")
     print("=" * 60)
     
-    # 创建RBF核函数
+    # Create an RBF kernel
     sigma = 0.2
     kernel = RBFKernel(sigma=sigma)
-    print(f"创建RBF核函数，sigma={sigma}")
+    print(f"Created RBF kernel with sigma={sigma}")
     
-    # 创建测试数据
+    # Generate test data
     n_points = 30
     x = np.linspace(0, 1, n_points)
-    y_true = np.sin(2 * np.pi * x) + 0.3 * np.cos(4 * np.pi * x)  # 混合正弦波
-    y = y_true + 0.1 * np.random.randn(n_points)  # 添加噪声
+    y_true = np.sin(2 * np.pi * x) + 0.3 * np.cos(4 * np.pi * x)  # mixed sine/cosine waves
+    y = y_true + 0.1 * np.random.randn(n_points)  # add noise
     
     data = MultiDimData({0: x})
     
-    # 创建解算器
+    # Create a solver
     solver = FunctionalSolver()
     solver.set_kernel(kernel)
     solver.load_data(data, y)
     
-    # 求解
-    print("\n求解中...")
+    # Solve
+    print("\nSolving...")
     coefficients = solver.solve()
-    print(f"系数数量: {len(coefficients)}")
+    print(f"Number of coefficients: {len(coefficients)}")
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     
-    # 计算误差
+    # Compute the error
     mse = np.mean((y_pred - y)**2)
-    print(f"均方误差 (MSE): {mse:.6f}")
+    print(f"Mean squared error (MSE): {mse:.6f}")
     
-    # 计算核矩阵
+    # Compute the kernel matrix
     K = kernel.compute_matrix(data)
-    print(f"核矩阵形状: {K.shape}")
-    print(f"核矩阵条件数: {np.linalg.cond(K):.2e}")
+    print(f"Kernel matrix shape: {K.shape}")
+    print(f"Kernel matrix condition number: {np.linalg.cond(K):.2e}")
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     
-    # 1. 数据拟合
+    # 1. Data fit
     ax1 = axes[0, 0]
-    ax1.scatter(x, y, alpha=0.5, label='数据', s=20)
-    ax1.plot(x, y_true, 'g-', linewidth=2, label='真实函数')
-    ax1.plot(x, y_pred, 'r-', linewidth=2, label='RBF核拟合')
+    ax1.scatter(x, y, alpha=0.5, label='Data', s=20)
+    ax1.plot(x, y_true, 'g-', linewidth=2, label='True function')
+    ax1.plot(x, y_pred, 'r-', linewidth=2, label='RBF fit')
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
-    ax1.set_title(f'RBF核函数拟合 (sigma={sigma})')
+    ax1.set_title(f'RBF kernel fit (sigma={sigma})')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. 核矩阵热图
+    # 2. Kernel matrix heatmap
     ax2 = axes[0, 1]
     im2 = ax2.imshow(K, cmap='viridis', aspect='auto')
-    ax2.set_xlabel('数据点索引')
-    ax2.set_ylabel('数据点索引')
-    ax2.set_title('RBF核矩阵')
+    ax2.set_xlabel('Data point index')
+    ax2.set_ylabel('Data point index')
+    ax2.set_title('RBF kernel matrix')
     plt.colorbar(im2, ax=ax2, shrink=0.7, aspect=10)
     
-    # 3. 核函数值
+    # 3. Kernel values
     ax3 = axes[0, 2]
-    x_test = 0.5  # 测试点
+    x_test = 0.5  # test point
     x_range = np.linspace(0, 1, 100)
     kernel_values = np.zeros_like(x_range)
     
@@ -91,42 +91,42 @@ def demo_rbf_kernel():
         kernel_values[i] = kernel({0: x_test}, {0: x_val})
     
     ax3.plot(x_range, kernel_values, 'b-', linewidth=2)
-    ax3.axvline(x=x_test, color='r', linestyle='--', alpha=0.5, label=f'中心点 x={x_test}')
+    ax3.axvline(x=x_test, color='r', linestyle='--', alpha=0.5, label=f'Center x={x_test}')
     ax3.set_xlabel('x')
-    ax3.set_ylabel('核函数值 k(x_test, x)')
-    ax3.set_title(f'RBF核函数 (中心在 x={x_test})')
+    ax3.set_ylabel('Kernel value k(x_test, x)')
+    ax3.set_title(f'RBF kernel (center x={x_test})')
     ax3.legend()
     ax3.grid(True, alpha=0.3)
     
-    # 4. 系数
+    # 4. Coefficients
     ax4 = axes[1, 0]
     indices = np.arange(len(coefficients))
     ax4.bar(indices, coefficients, alpha=0.7, color='steelblue')
-    ax4.set_xlabel('数据点索引')
-    ax4.set_ylabel('系数值')
-    ax4.set_title('RBF核系数')
+    ax4.set_xlabel('Data point index')
+    ax4.set_ylabel('Coefficient')
+    ax4.set_title('RBF kernel coefficients')
     ax4.grid(True, alpha=0.3, axis='y')
     
-    # 5. 残差
+    # 5. Residuals
     ax5 = axes[1, 1]
     residuals = y - y_pred
     ax5.scatter(x, residuals, alpha=0.6, color='purple', s=20)
     ax5.axhline(y=0, color='r', linestyle='--', alpha=0.5)
     ax5.set_xlabel('x')
-    ax5.set_ylabel('残差')
-    ax5.set_title('残差图')
+    ax5.set_ylabel('Residual')
+    ax5.set_title('Residuals')
     ax5.grid(True, alpha=0.3)
     
-    # 6. 特征值谱
+    # 6. Eigenvalue spectrum
     ax6 = axes[1, 2]
-    eigenvalues = np.linalg.eigvalsh(K)  # 对称矩阵，使用eigvalsh
+    eigenvalues = np.linalg.eigvalsh(K)  # symmetric matrix: use eigvalsh
     eigenvalues_sorted = np.sort(eigenvalues)[::-1]
     indices_eig = np.arange(1, len(eigenvalues_sorted) + 1)
     
     ax6.semilogy(indices_eig, eigenvalues_sorted, 'bo-', linewidth=2, markersize=6)
-    ax6.set_xlabel('特征值索引')
-    ax6.set_ylabel('特征值（对数尺度）')
-    ax6.set_title('核矩阵特征值谱')
+    ax6.set_xlabel('Eigenvalue index')
+    ax6.set_ylabel('Eigenvalue (log scale)')
+    ax6.set_title('Kernel matrix eigenvalue spectrum')
     ax6.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -136,72 +136,72 @@ def demo_rbf_kernel():
     return coefficients, mse, K
 
 def demo_polynomial_kernel():
-    """多项式核函数示例"""
+    """Polynomial kernel demo"""
     print("\n" + "=" * 60)
-    print("多项式核函数示例")
+    print("Polynomial kernel demo")
     print("=" * 60)
     
-    # 创建多项式核函数
+    # Create a polynomial kernel
     degree = 3
     c = 1.0
     kernel = PolynomialKernel(degree=degree, c=c)
-    print(f"创建多项式核函数，degree={degree}, c={c}")
+    print(f"Created polynomial kernel with degree={degree}, c={c}")
     
-    # 创建测试数据
+    # Generate test data
     n_points = 25
     x = np.linspace(-1, 1, n_points)
-    y_true = x**3 - 2*x**2 + 0.5*x + 1  # 三次多项式
-    y = y_true + 0.05 * np.random.randn(n_points)  # 添加少量噪声
+    y_true = x**3 - 2*x**2 + 0.5*x + 1  # cubic polynomial
+    y = y_true + 0.05 * np.random.randn(n_points)  # add a small amount of noise
     
     data = MultiDimData({0: x})
     
-    # 创建解算器
+    # Create a solver
     solver = FunctionalSolver()
     solver.set_kernel(kernel)
     solver.load_data(data, y)
     
-    # 求解
-    print("\n求解中...")
+    # Solve
+    print("\nSolving...")
     coefficients = solver.solve()
-    print(f"系数数量: {len(coefficients)}")
+    print(f"Number of coefficients: {len(coefficients)}")
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     
-    # 计算误差
+    # Compute the error
     mse = np.mean((y_pred - y)**2)
-    print(f"均方误差 (MSE): {mse:.6f}")
+    print(f"Mean squared error (MSE): {mse:.6f}")
     
-    # 计算核矩阵
+    # Compute the kernel matrix
     K = kernel.compute_matrix(data)
-    print(f"核矩阵形状: {K.shape}")
-    print(f"核矩阵条件数: {np.linalg.cond(K):.2e}")
+    print(f"Kernel matrix shape: {K.shape}")
+    print(f"Kernel matrix condition number: {np.linalg.cond(K):.2e}")
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     
-    # 1. 数据拟合
+    # 1. Data fit
     ax1 = axes[0, 0]
-    ax1.scatter(x, y, alpha=0.5, label='数据', s=20)
-    ax1.plot(x, y_true, 'g-', linewidth=2, label='真实函数')
-    ax1.plot(x, y_pred, 'r-', linewidth=2, label='多项式核拟合')
+    ax1.scatter(x, y, alpha=0.5, label='Data', s=20)
+    ax1.plot(x, y_true, 'g-', linewidth=2, label='True function')
+    ax1.plot(x, y_pred, 'r-', linewidth=2, label='Polynomial kernel fit')
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
-    ax1.set_title(f'多项式核函数拟合 (degree={degree})')
+    ax1.set_title(f'Polynomial kernel fit (degree={degree})')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. 核矩阵热图
+    # 2. Kernel matrix heatmap
     ax2 = axes[0, 1]
     im2 = ax2.imshow(K, cmap='plasma', aspect='auto')
-    ax2.set_xlabel('数据点索引')
-    ax2.set_ylabel('数据点索引')
-    ax2.set_title('多项式核矩阵')
+    ax2.set_xlabel('Data point index')
+    ax2.set_ylabel('Data point index')
+    ax2.set_title('Polynomial kernel matrix')
     plt.colorbar(im2, ax=ax2, shrink=0.7, aspect=10)
     
-    # 3. 核函数值
+    # 3. Kernel values
     ax3 = axes[0, 2]
-    x_test = 0.0  # 测试点
+    x_test = 0.0  # test point
     x_range = np.linspace(-1, 1, 100)
     kernel_values = np.zeros_like(x_range)
     
@@ -209,14 +209,14 @@ def demo_polynomial_kernel():
         kernel_values[i] = kernel({0: x_test}, {0: x_val})
     
     ax3.plot(x_range, kernel_values, 'b-', linewidth=2)
-    ax3.axvline(x=x_test, color='r', linestyle='--', alpha=0.5, label=f'中心点 x={x_test}')
+    ax3.axvline(x=x_test, color='r', linestyle='--', alpha=0.5, label=f'Center x={x_test}')
     ax3.set_xlabel('x')
-    ax3.set_ylabel('核函数值 k(x_test, x)')
-    ax3.set_title(f'多项式核函数 (中心在 x={x_test})')
+    ax3.set_ylabel('Kernel value k(x_test, x)')
+    ax3.set_title(f'Polynomial kernel (center x={x_test})')
     ax3.legend()
     ax3.grid(True, alpha=0.3)
     
-    # 4. 不同阶数的比较
+    # 4. Comparison across degrees
     ax4 = axes[1, 0]
     degrees = [1, 2, 3, 4, 5]
     mse_values = []
@@ -232,30 +232,30 @@ def demo_polynomial_kernel():
         mse_values.append(mse_temp)
     
     ax4.plot(degrees, mse_values, 'ro-', linewidth=2, markersize=8)
-    ax4.set_xlabel('多项式阶数')
-    ax4.set_ylabel('均方误差 (MSE)')
-    ax4.set_title('不同阶数多项式核的拟合误差')
+    ax4.set_xlabel('Polynomial degree')
+    ax4.set_ylabel('Mean squared error (MSE)')
+    ax4.set_title('Polynomial kernel fit error vs degree')
     ax4.grid(True, alpha=0.3)
     
-    # 5. 系数分布
+    # 5. Coefficient distribution
     ax5 = axes[1, 1]
     indices = np.arange(len(coefficients))
     ax5.bar(indices, coefficients, alpha=0.7, color='steelblue')
-    ax5.set_xlabel('数据点索引')
-    ax5.set_ylabel('系数值')
-    ax5.set_title('多项式核系数')
+    ax5.set_xlabel('Data point index')
+    ax5.set_ylabel('Coefficient')
+    ax5.set_title('Polynomial kernel coefficients')
     ax5.grid(True, alpha=0.3, axis='y')
     
-    # 6. 特征值谱
+    # 6. Eigenvalue spectrum
     ax6 = axes[1, 2]
     eigenvalues = np.linalg.eigvalsh(K)
     eigenvalues_sorted = np.sort(eigenvalues)[::-1]
     indices_eig = np.arange(1, len(eigenvalues_sorted) + 1)
     
     ax6.semilogy(indices_eig, eigenvalues_sorted, 'go-', linewidth=2, markersize=6)
-    ax6.set_xlabel('特征值索引')
-    ax6.set_ylabel('特征值（对数尺度）')
-    ax6.set_title('多项式核矩阵特征值谱')
+    ax6.set_xlabel('Eigenvalue index')
+    ax6.set_ylabel('Eigenvalue (log scale)')
+    ax6.set_title('Polynomial kernel matrix eigenvalue spectrum')
     ax6.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -265,68 +265,68 @@ def demo_polynomial_kernel():
     return coefficients, mse, K
 
 def demo_matern_kernel():
-    """Matern核函数示例"""
+    """Matérn kernel demo"""
     print("\n" + "=" * 60)
-    print("Matern核函数示例")
+    print("Matérn kernel demo")
     print("=" * 60)
     
-    # 创建不同nu值的Matern核函数
+    # Create Matérn kernels with different smoothness parameters nu
     kernels = []
-    nu_values = [0.5, 1.5, 2.5, float('inf')]  # 对应不同平滑度
+    nu_values = [0.5, 1.5, 2.5, float('inf')]  # different smoothness levels
     kernel_names = ['Matern ν=1/2', 'Matern ν=3/2', 'Matern ν=5/2', 'RBF (ν→∞)']
     
     for nu in nu_values:
         if nu == float('inf'):
-            kernel = RBFKernel(sigma=0.3)  # RBF是Matern在ν→∞时的极限
+            kernel = RBFKernel(sigma=0.3)  # RBF is the Matérn limit as ν → ∞
         else:
             kernel = MaternKernel(sigma=0.3, nu=nu)
         kernels.append(kernel)
     
-    # 创建测试数据
+    # Generate test data
     n_points = 40
     x = np.linspace(0, 2, n_points)
-    y_true = np.sin(2 * np.pi * x) + 0.2 * np.random.randn(n_points)  # 带噪声的正弦波
+    y_true = np.sin(2 * np.pi * x) + 0.2 * np.random.randn(n_points)  # noisy sine wave
     
     data = MultiDimData({0: x})
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     
     results = []
     
     for idx, (kernel, name) in enumerate(zip(kernels, kernel_names)):
-        print(f"\n使用{name}核函数...")
+        print(f"\nFitting with {name} kernel...")
         
-        # 创建解算器
+        # Create a solver
         solver = FunctionalSolver()
         solver.set_kernel(kernel)
         solver.load_data(data, y_true)
         
-        # 求解
+        # Solve
         coefficients = solver.solve()
         y_pred = solver.predict(data)
         
-        # 计算误差
+        # Compute the error
         mse = np.mean((y_pred - y_true)**2)
         results.append((name, mse, y_pred))
-        print(f"  均方误差 (MSE): {mse:.6f}")
+        print(f"  Mean squared error (MSE): {mse:.6f}")
         
-        # 1. 不同核函数的拟合结果
+        # 1. Fits from different kernels
         row = idx // 2
         col = idx % 2
         ax = axes[row, col]
         
-        ax.scatter(x, y_true, alpha=0.5, label='数据', s=10)
-        ax.plot(x, y_pred, 'r-', linewidth=2, label=f'{name}拟合')
+        ax.scatter(x, y_true, alpha=0.5, label='Data', s=10)
+        ax.plot(x, y_pred, 'r-', linewidth=2, label=f'{name} fit')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        ax.set_title(f'{name}核函数拟合')
+        ax.set_title(f'{name} kernel fit')
         ax.legend()
         ax.grid(True, alpha=0.3)
     
-    # 5. 核函数值比较
+    # 5. Kernel value comparison
     ax5 = axes[1, 2]
-    x_test = 1.0  # 测试点
+    x_test = 1.0  # test point
     x_range = np.linspace(0, 2, 100)
     
     for idx, (kernel, name) in enumerate(zip(kernels, kernel_names)):
@@ -336,27 +336,27 @@ def demo_matern_kernel():
         
         ax5.plot(x_range, kernel_values, linewidth=2, label=name)
     
-    ax5.axvline(x=x_test, color='k', linestyle='--', alpha=0.5, label=f'中心点 x={x_test}')
+    ax5.axvline(x=x_test, color='k', linestyle='--', alpha=0.5, label=f'Center x={x_test}')
     ax5.set_xlabel('x')
-    ax5.set_ylabel('核函数值 k(x_test, x)')
-    ax5.set_title('不同Matern核函数比较')
+    ax5.set_ylabel('Kernel value k(x_test, x)')
+    ax5.set_title('Matérn kernel comparison')
     ax5.legend()
     ax5.grid(True, alpha=0.3)
     
-    # 6. 误差比较
+    # 6. Error comparison
     ax6 = axes[0, 2]
     names = [r[0] for r in results]
     mse_values = [r[1] for r in results]
     
     bars = ax6.bar(range(len(names)), mse_values, alpha=0.7, color=['blue', 'green', 'red', 'purple'])
-    ax6.set_xlabel('核函数类型')
-    ax6.set_ylabel('均方误差 (MSE)')
-    ax6.set_title('不同核函数的拟合误差')
+    ax6.set_xlabel('Kernel')
+    ax6.set_ylabel('Mean squared error (MSE)')
+    ax6.set_title('Fit error by kernel')
     ax6.set_xticks(range(len(names)))
     ax6.set_xticklabels(names, rotation=45, ha='right')
     ax6.grid(True, alpha=0.3, axis='y')
     
-    # 在柱状图上添加数值标签
+    # Annotate bars with values
     for bar, mse in zip(bars, mse_values):
         height = bar.get_height()
         ax6.text(bar.get_x() + bar.get_width()/2., height,
@@ -369,93 +369,93 @@ def demo_matern_kernel():
     return results
 
 def demo_composite_kernel():
-    """复合核函数示例"""
+    """Composite kernel demo"""
     print("\n" + "=" * 60)
-    print("复合核函数示例")
+    print("Composite kernel demo")
     print("=" * 60)
     
-    # 创建基础核函数
+    # Base kernels
     rbf_kernel = RBFKernel(sigma=0.3)
     poly_kernel = PolynomialKernel(degree=2, c=1.0)
     matern_kernel = MaternKernel(sigma=0.3, nu=1.5)
     
-    # 创建复合核函数
-    print("创建复合核函数...")
+    # Build composite kernels
+    print("Building composite kernels...")
     
-    # 1. 加法复合核
+    # 1. Additive composite kernel
     additive_kernel = CompositeKernel([rbf_kernel, poly_kernel], operation='add')
-    print("  - 加法复合核: RBF + 多项式")
+    print("  - Additive: RBF + Polynomial")
     
-    # 2. 乘法复合核
+    # 2. Multiplicative composite kernel
     multiplicative_kernel = CompositeKernel([rbf_kernel, poly_kernel], operation='multiply')
-    print("  - 乘法复合核: RBF × 多项式")
+    print("  - Multiplicative: RBF × Polynomial")
     
     kernels = [rbf_kernel, poly_kernel, additive_kernel, multiplicative_kernel]
-    kernel_names = ['RBF', '多项式', 'RBF+多项式', 'RBF×多项式']
+    kernel_names = ['RBF', 'Polynomial', 'RBF+Polynomial', 'RBF×Polynomial']
     
-    # 创建测试数据
+    # Generate test data
     n_points = 30
     x = np.linspace(0, 1, n_points)
-    # 复杂函数：多项式 + 周期 + 局部特征
+    # Target: polynomial + periodic + localized features
     y_true = 0.5*x**2 + np.sin(2*np.pi*x) + np.exp(-(x-0.7)**2/0.02)
-    y = y_true + 0.05 * np.random.randn(n_points)  # 添加少量噪声
+    y = y_true + 0.05 * np.random.randn(n_points)  # add a small amount of noise
     
     data = MultiDimData({0: x})
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(3, 2, figsize=(15, 15))
     axes = axes.flatten()
     
     results = []
     
     for idx, (kernel, name) in enumerate(zip(kernels, kernel_names)):
-        print(f"\n使用{name}核函数...")
+        print(f"\nFitting with {name} kernel...")
         
-        # 创建解算器
+        # Create a solver
         solver = FunctionalSolver()
         solver.set_kernel(kernel)
         solver.load_data(data, y)
         
-        # 求解
+        # Solve
         coefficients = solver.solve()
         y_pred = solver.predict(data)
         
-        # 计算误差
+        # Compute the error
         mse = np.mean((y_pred - y)**2)
         results.append((name, mse, y_pred))
-        print(f"  均方误差 (MSE): {mse:.6f}")
+        print(f"  Mean squared error (MSE): {mse:.6f}")
         
-        # 1. 拟合结果
+        # 1. Fit result
         ax = axes[idx]
-        ax.scatter(x, y, alpha=0.5, label='数据', s=10)
-        ax.plot(x, y_true, 'g-', linewidth=2, label='真实函数', alpha=0.7)
-        ax.plot(x, y_pred, 'r-', linewidth=2, label=f'{name}拟合')
+        ax.scatter(x, y, alpha=0.5, label='Data', s=10)
+        ax.plot(x, y_true, 'g-', linewidth=2, label='True function', alpha=0.7)
+        ax.plot(x, y_pred, 'r-', linewidth=2, label=f'{name} fit')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        ax.set_title(f'{name}核函数拟合')
+        ax.set_title(f'{name} kernel fit')
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
         
-        # 计算核矩阵
+        # Kernel matrix
         K = kernel.compute_matrix(data)
-        print(f"  核矩阵条件数: {np.linalg.cond(K):.2e}")
+        print(f"  Kernel matrix condition number: {np.linalg.cond(K):.2e}")
     
-    # 6. 误差比较
+    # 6. Error comparison
     ax6 = axes[5]
     names = [r[0] for r in results]
     mse_values = [r[1] for r in results]
     
     bars = ax6.bar(range(len(names)), mse_values, alpha=0.7, 
                   color=['blue', 'green', 'red', 'purple', 'orange'])
-    ax6.set_xlabel('核函数类型')
-    ax6.set_ylabel('均方误差 (MSE)')
-    ax6.set_title('不同核函数的拟合误差比较')
+    ax6.set_xlabel('Kernel')
+    ax6.set_ylabel('Mean squared error (MSE)')
+    ax6.set_title('Fit error by kernel')
     ax6.set_xticks(range(len(names)))
     ax6.set_xticklabels(names, rotation=45, ha='right', fontsize=9)
     ax6.grid(True, alpha=0.3, axis='y')
     ax6.set_yscale('log')
     
-    # 在柱状图上添加数值标签
+    # Annotate bars with values
     for bar, mse in zip(bars, mse_values):
         height = bar.get_height()
         ax6.text(bar.get_x() + bar.get_width()/2., height,
@@ -465,15 +465,15 @@ def demo_composite_kernel():
     plt.savefig(os.path.join(OUTPUT_DIR, 'demo_composite_kernel.png'), dpi=150, bbox_inches='tight')
     plt.show()
     
-    # 额外可视化：核函数值比较
+    # Additional plot: kernel value comparison
     fig2, axes2 = plt.subplots(2, 3, figsize=(15, 10))
     axes2 = axes2.flatten()
     
-    x_test = 0.5  # 测试点
+    x_test = 0.5  # test point
     x_range = np.linspace(0, 1, 100)
     
     for idx, (kernel, name) in enumerate(zip(kernels, kernel_names)):
-        if idx >= 6:  # 只显示前6个
+        if idx >= 6:  # show at most 6 panels
             break
             
         kernel_values = np.zeros_like(x_range)
@@ -482,10 +482,10 @@ def demo_composite_kernel():
         
         ax = axes2[idx]
         ax.plot(x_range, kernel_values, 'b-', linewidth=2)
-        ax.axvline(x=x_test, color='r', linestyle='--', alpha=0.5, label=f'中心点 x={x_test}')
+        ax.axvline(x=x_test, color='r', linestyle='--', alpha=0.5, label=f'Center x={x_test}')
         ax.set_xlabel('x')
         ax.set_ylabel('k(x_test, x)')
-        ax.set_title(f'{name}核函数')
+        ax.set_title(f'{name} kernel')
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
     
@@ -496,19 +496,19 @@ def demo_composite_kernel():
     return results
 
 def demo_kernel_solver_features():
-    """核解算器特性示例"""
+    """Kernel solver features demo"""
     print("\n" + "=" * 60)
-    print("核解算器特性示例")
+    print("Kernel solver features demo")
     print("=" * 60)
     
-    # 创建RBF核函数
+    # RBF kernel
     kernel = RBFKernel(sigma=0.2)
     
-    # 创建核解算器
+    # Kernel solver
     solver = KernelSolver(kernel)
-    print("创建核解算器...")
+    print("Creating kernel solver...")
     
-    # 创建测试数据
+    # Generate test data
     n_points = 20
     x = np.linspace(0, 1, n_points)
     y_true = np.sin(2 * np.pi * x)
@@ -516,87 +516,87 @@ def demo_kernel_solver_features():
     
     data = MultiDimData({0: x})
     
-    # 加载数据
+    # Load data
     solver.load_data(data, y)
     
-    # 计算核矩阵
+    # Kernel matrix
     K = solver.compute_kernel_matrix()
-    print(f"核矩阵形状: {K.shape}")
+    print(f"Kernel matrix shape: {K.shape}")
     
-    # 计算特征值
+    # Eigenvalues
     eigenvalues = solver.get_eigenvalues()
-    print(f"特征值数量: {len(eigenvalues)}")
-    print(f"最大特征值: {eigenvalues[0]:.4f}")
-    print(f"最小特征值: {eigenvalues[-1]:.4f}")
-    print(f"条件数: {solver.get_condition_number():.2e}")
+    print(f"Number of eigenvalues: {len(eigenvalues)}")
+    print(f"Largest eigenvalue: {eigenvalues[0]:.4f}")
+    print(f"Smallest eigenvalue: {eigenvalues[-1]:.4f}")
+    print(f"Condition number: {solver.get_condition_number():.2e}")
     
-    # 计算函数范数
+    # Function norm
     norm = solver.compute_function_norm()
-    print(f"函数范数: {norm:.4f}")
+    print(f"Function norm: {norm:.4f}")
     
-    # 求解
+    # Solve
     coefficients = solver.solve()
     
-    # 预测
+    # Predict
     y_pred = solver.predict(data)
     
-    # 高效预测
+    # Efficient prediction
     y_pred_efficient = solver.predict_efficient(data)
     
-    # 计算误差
+    # Errors
     mse = np.mean((y_pred - y)**2)
     mse_efficient = np.mean((y_pred_efficient - y)**2)
-    print(f"标准预测MSE: {mse:.6f}")
-    print(f"高效预测MSE: {mse_efficient:.6f}")
-    print(f"预测一致性: {np.allclose(y_pred, y_pred_efficient, rtol=1e-10)}")
+    print(f"Standard prediction MSE: {mse:.6f}")
+    print(f"Efficient prediction MSE: {mse_efficient:.6f}")
+    print(f"Predictions agree: {np.allclose(y_pred, y_pred_efficient, rtol=1e-10)}")
     
-    # 可视化
+    # Visualization
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     
-    # 1. 数据拟合
+    # 1. Data fit
     ax1 = axes[0, 0]
-    ax1.scatter(x, y, alpha=0.5, label='数据', s=20)
-    ax1.plot(x, y_true, 'g-', linewidth=2, label='真实函数', alpha=0.7)
-    ax1.plot(x, y_pred, 'r-', linewidth=2, label='核方法拟合')
+    ax1.scatter(x, y, alpha=0.5, label='Data', s=20)
+    ax1.plot(x, y_true, 'g-', linewidth=2, label='True function', alpha=0.7)
+    ax1.plot(x, y_pred, 'r-', linewidth=2, label='Kernel method fit')
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
-    ax1.set_title('核方法拟合结果')
+    ax1.set_title('Kernel method fit')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # 2. 核矩阵热图
+    # 2. Kernel matrix heatmap
     ax2 = axes[0, 1]
     im2 = ax2.imshow(K, cmap='viridis', aspect='auto')
-    ax2.set_xlabel('数据点索引')
-    ax2.set_ylabel('数据点索引')
-    ax2.set_title('核矩阵')
+    ax2.set_xlabel('Data point index')
+    ax2.set_ylabel('Data point index')
+    ax2.set_title('Kernel matrix')
     plt.colorbar(im2, ax=ax2, shrink=0.7, aspect=10)
     
-    # 3. 特征值谱
+    # 3. Eigenvalue spectrum
     ax3 = axes[0, 2]
     indices = np.arange(1, len(eigenvalues) + 1)
     ax3.semilogy(indices, eigenvalues, 'bo-', linewidth=2, markersize=6)
-    ax3.set_xlabel('特征值索引')
-    ax3.set_ylabel('特征值（对数尺度）')
-    ax3.set_title('核矩阵特征值谱')
+    ax3.set_xlabel('Eigenvalue index')
+    ax3.set_ylabel('Eigenvalue (log scale)')
+    ax3.set_title('Kernel matrix eigenvalue spectrum')
     ax3.grid(True, alpha=0.3)
     
-    # 4. 系数
+    # 4. Coefficients
     ax4 = axes[1, 0]
     indices_coeff = np.arange(len(coefficients))
     ax4.bar(indices_coeff, coefficients, alpha=0.7, color='steelblue')
-    ax4.set_xlabel('数据点索引')
-    ax4.set_ylabel('系数值')
-    ax4.set_title('核方法系数')
+    ax4.set_xlabel('Data point index')
+    ax4.set_ylabel('Coefficient')
+    ax4.set_title('Kernel method coefficients')
     ax4.grid(True, alpha=0.3, axis='y')
     
-    # 5. 留一法误差估计
+    # 5. Leave-one-out error estimate
     ax5 = axes[1, 1]
     loo_errors = []
     
-    # 计算每个数据点的留一法误差
-    for i in range(min(10, n_points)):  # 只计算前10个点以节省时间
-        # 创建不包含第i个点的数据
+    # Leave-one-out error for each point
+    for i in range(min(10, n_points)):  # first 10 points to save time
+        # Training data without point i
         mask = np.ones(n_points, dtype=bool)
         mask[i] = False
         
@@ -608,24 +608,24 @@ def demo_kernel_solver_features():
         train_data = MultiDimData({0: x_train})
         test_data = MultiDimData({0: np.array([x_test])})
         
-        # 训练新解算器
+        # Train a fresh solver
         temp_solver = KernelSolver(kernel)
         temp_solver.load_data(train_data, y_train)
         temp_solver.solve()
         
-        # 预测测试点
+        # Predict the held-out point
         y_pred_test = temp_solver.predict(test_data)[0]
         loo_errors.append(abs(y_pred_test - y_test))
     
     ax5.plot(range(len(loo_errors)), loo_errors, 'ro-', linewidth=2, markersize=6)
-    ax5.set_xlabel('数据点索引')
-    ax5.set_ylabel('留一法误差')
-    ax5.set_title('留一法误差估计（前10个点）')
+    ax5.set_xlabel('Data point index')
+    ax5.set_ylabel('Leave-one-out error')
+    ax5.set_title('Leave-one-out errors (first 10 points)')
     ax5.grid(True, alpha=0.3)
     
-    # 6. 正则化效果
+    # 6. Effect of regularization
     ax6 = axes[1, 2]
-    alphas = np.logspace(-6, 0, 10)  # 正则化参数
+    alphas = np.logspace(-6, 0, 10)  # regularization parameter
     norms = []
     mses = []
     
@@ -639,19 +639,19 @@ def demo_kernel_solver_features():
         mses.append(np.mean((y_pred_temp - y)**2))
     
     ax6a = ax6.twinx()
-    line1, = ax6.plot(alphas, norms, 'b-', linewidth=2, label='系数范数')
+    line1, = ax6.plot(alphas, norms, 'b-', linewidth=2, label='Coefficient norm')
     line2, = ax6a.plot(alphas, mses, 'r--', linewidth=2, label='MSE')
     
-    ax6.set_xlabel('正则化参数 α')
-    ax6.set_ylabel('系数范数', color='b')
-    ax6a.set_ylabel('均方误差', color='r')
-    ax6.set_title('正则化效果')
+    ax6.set_xlabel('Regularization parameter α')
+    ax6.set_ylabel('Coefficient norm', color='b')
+    ax6a.set_ylabel('Mean squared error', color='r')
+    ax6.set_title('Effect of regularization')
     ax6.set_xscale('log')
     ax6.set_yscale('log')
     ax6a.set_yscale('log')
     ax6.grid(True, alpha=0.3)
     
-    # 合并图例
+    # Merged legend
     lines = [line1, line2]
     labels = [l.get_label() for l in lines]
     ax6.legend(lines, labels, loc='upper right')
@@ -663,45 +663,45 @@ def demo_kernel_solver_features():
     return solver, coefficients, eigenvalues
 
 if __name__ == "__main__":
-    print("RKHS核函数示例")
+    print("RKHS Kernel Demo")
     print("=" * 60)
     
-    # 运行所有示例
+    # Run all demos
     results_summary = {}
     
-    # 1. RBF核函数
-    print("\n1. RBF核函数示例")
+    # 1. RBF kernel
+    print("\n1. RBF kernel demo")
     coeff_rbf, mse_rbf, K_rbf = demo_rbf_kernel()
     results_summary['RBF'] = mse_rbf
     
-    # 2. 多项式核函数
-    print("\n2. 多项式核函数示例")
+    # 2. Polynomial kernel
+    print("\n2. Polynomial kernel demo")
     coeff_poly, mse_poly, K_poly = demo_polynomial_kernel()
-    results_summary['多项式'] = mse_poly
+    results_summary['Polynomial'] = mse_poly
     
-    # 3. Matern核函数
-    print("\n3. Matern核函数示例")
+    # 3. Matérn kernel
+    print("\n3. Matérn kernel demo")
     results_matern = demo_matern_kernel()
     for name, mse, _ in results_matern:
         results_summary[name] = mse
     
-    # 4. 复合核函数
-    print("\n4. 复合核函数示例")
+    # 4. Composite kernel
+    print("\n4. Composite kernel demo")
     results_composite = demo_composite_kernel()
     for name, mse, _ in results_composite:
         results_summary[name] = mse
     
-    # 5. 核解算器特性
-    print("\n5. 核解算器特性示例")
+    # 5. Kernel solver features
+    print("\n5. Kernel solver features demo")
     solver, coeff_kernel, eigenvalues = demo_kernel_solver_features()
-    results_summary['核解算器'] = np.mean((solver.predict(MultiDimData({0: np.linspace(0, 1, 20)})) - 
+    results_summary['Kernel solver'] = np.mean((solver.predict(MultiDimData({0: np.linspace(0, 1, 20)})) - 
                                           np.sin(2*np.pi*np.linspace(0, 1, 20)))**2)
     
-    # 打印结果总结
+    # Print summary
     print("\n" + "=" * 60)
-    print("结果总结")
+    print("Results summary")
     print("=" * 60)
     for method, mse in sorted(results_summary.items(), key=lambda x: x[1]):
         print(f"{method:15}: MSE = {mse:.6f}")
     
-    print("\n示例完成！")
+    print("\nDemo complete!")

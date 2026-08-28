@@ -1,4 +1,4 @@
-"""功能求解器的核函数。"""
+"""Kernel functions for the functional solver."""
 
 from .base import Kernel
 from .rbf import RBFKernel
