@@ -10,12 +10,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.core.basis_container import BasisSet
-from functional_solver.basis.factory import BasisFactory
-from functional_solver.basis.additive import AdditiveBasis
-from functional_solver.inner_product.base import InnerProduct
-from functional_solver.solver.functional_solver import FunctionalSolver
+from geomfit.core.data_container import MultiDimData
+from geomfit.core.basis_container import BasisSet
+from geomfit.basis.factory import BasisFactory
+from geomfit.basis.additive import AdditiveBasis
+from geomfit.inner_product.base import InnerProduct
+from geomfit.solver.functional_solver import FunctionalSolver
 
 def demo_2d_polynomial_basis():
     """2D polynomial basis demo"""

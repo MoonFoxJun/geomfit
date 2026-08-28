@@ -5,9 +5,9 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.core.basis_container import BasisSet
-from functional_solver.basis.factory import BasisFactory
+from geomfit.core.data_container import MultiDimData
+from geomfit.core.basis_container import BasisSet
+from geomfit.basis.factory import BasisFactory
 
 def test_polynomial_basis():
     """Test the polynomial basis."""
@@ -132,7 +132,7 @@ def test_basis_set_evaluate_at_point():
 
 def test_rbf_basis():
     """Test the radial basis function (RBF)."""
-    from functional_solver.basis.rbf import RBFBasis
+    from geomfit.basis.rbf import RBFBasis
     
     # Create a Gaussian RBF
     rbf = RBFBasis.gaussian(dim=0, center=0.0, sigma=1.0)
@@ -147,7 +147,7 @@ def test_rbf_basis():
 
 def test_wavelet_basis():
     """Test the wavelet basis function."""
-    from functional_solver.basis.wavelet import WaveletBasis
+    from geomfit.basis.wavelet import WaveletBasis
     
     # Create a Mexican hat wavelet
     wavelet = WaveletBasis.mexican_hat(dim=0, center=0.0, scale=1.0)

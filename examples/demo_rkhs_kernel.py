@@ -10,13 +10,13 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.kernel.rbf import RBFKernel
-from functional_solver.kernel.polynomial import PolynomialKernel
-from functional_solver.kernel.matern import MaternKernel
-from functional_solver.kernel.composite import CompositeKernel
-from functional_solver.solver.functional_solver import FunctionalSolver
-from functional_solver.solver.kernel_solver import KernelSolver
+from geomfit.core.data_container import MultiDimData
+from geomfit.kernel.rbf import RBFKernel
+from geomfit.kernel.polynomial import PolynomialKernel
+from geomfit.kernel.matern import MaternKernel
+from geomfit.kernel.composite import CompositeKernel
+from geomfit.solver.functional_solver import FunctionalSolver
+from geomfit.solver.kernel_solver import KernelSolver
 
 def demo_rbf_kernel():
     """RBF kernel demo"""

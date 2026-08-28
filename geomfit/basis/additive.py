@@ -42,7 +42,7 @@ Rationale / use cases
 
 Usage
 -----
-    from functional_solver.basis.additive import AdditiveBasis
+    from geomfit.basis.additive import AdditiveBasis
 
     x_bases = [BasisFactory.polynomial(dim=0, order=o) for o in range(3)]
     y_bases = [BasisFactory.polynomial(dim=1, order=o) for o in range(3)]

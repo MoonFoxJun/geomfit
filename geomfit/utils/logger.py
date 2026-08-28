@@ -9,7 +9,7 @@ from pathlib import Path
 class Logger:
     """Logging utility for the functional solver."""
     
-    def __init__(self, name: str = "functional_solver", 
+    def __init__(self, name: str = "geomfit", 
                  log_level: str = "INFO",
                  log_file: Optional[str] = None,
                  console_output: bool = True):
@@ -18,7 +18,7 @@ class Logger:
         
         Parameters
         ----------
-        name : str, default="functional_solver"
+        name : str, default="geomfit"
             Logger name.
         log_level : str, default="INFO"
             Log level: DEBUG, INFO, WARNING, ERROR, or CRITICAL.
@@ -173,7 +173,7 @@ class Logger:
             Default logger instance.
         """
         return Logger(
-            name="functional_solver",
+            name="geomfit",
             log_level="INFO",
             log_file=log_file,
             console_output=True
@@ -195,7 +195,7 @@ class Logger:
             Debug logger instance.
         """
         return Logger(
-            name="functional_solver_debug",
+            name="geomfit_debug",
             log_level="DEBUG",
             log_file=log_file,
             console_output=True
@@ -212,8 +212,8 @@ class Logger:
             Quiet logger instance.
         """
         return Logger(
-            name="functional_solver_quiet",
+            name="geomfit_quiet",
             log_level="INFO",
-            log_file="functional_solver.log",
+            log_file="geomfit.log",
             console_output=False
         )

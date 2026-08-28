@@ -5,11 +5,11 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.basis.factory import BasisFactory
-from functional_solver.basis.additive import AdditiveBasis
-from functional_solver.inner_product.base import InnerProduct
-from functional_solver.solver.functional_solver import FunctionalSolver
+from geomfit.core.data_container import MultiDimData
+from geomfit.basis.factory import BasisFactory
+from geomfit.basis.additive import AdditiveBasis
+from geomfit.inner_product.base import InnerProduct
+from geomfit.solver.functional_solver import FunctionalSolver
 
 
 def test_additive_constant_dedup():

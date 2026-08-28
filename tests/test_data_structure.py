@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from functional_solver.core.data_container import MultiDimData
+from geomfit.core.data_container import MultiDimData
 
 def test_multi_dim_data_creation():
     """Test MultiDimData creation."""

@@ -5,10 +5,10 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.core.basis_container import BasisSet
-from functional_solver.basis.factory import BasisFactory
-from functional_solver.inner_product.base import InnerProduct
+from geomfit.core.data_container import MultiDimData
+from geomfit.core.basis_container import BasisSet
+from geomfit.basis.factory import BasisFactory
+from geomfit.inner_product.base import InnerProduct
 
 def test_gram_matrix_1d():
     """Test Gram matrix computation in 1D."""
@@ -146,7 +146,7 @@ def test_gram_matrix_orthogonal_basis():
 
 def test_gram_matrix_singularity():
     """Test singularity detection for the Gram matrix."""
-    from functional_solver.inner_product.regularization import Regularization
+    from geomfit.inner_product.regularization import Regularization
     
     # Create linearly dependent basis functions
     basis_set = BasisSet()
@@ -175,7 +175,7 @@ def test_gram_matrix_singularity():
 
 def test_gram_matrix_regularization():
     """Test Gram matrix regularization."""
-    from functional_solver.inner_product.regularization import Regularization
+    from geomfit.inner_product.regularization import Regularization
     
     # Create a nearly singular Gram matrix
     G = np.array([[1.0, 0.999999], [0.999999, 1.0]])
@@ -197,7 +197,7 @@ def test_gram_matrix_regularization():
 
 def test_gram_solver():
     """Test the GramSolver."""
-    from functional_solver.solver.gram_solver import GramSolver
+    from geomfit.solver.gram_solver import GramSolver
     
     # Create a basis set
     basis_set = BasisSet()

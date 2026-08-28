@@ -12,13 +12,13 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_regression, make_friedman1, load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.core.basis_container import BasisSet
-from functional_solver.basis.factory import BasisFactory
-from functional_solver.kernel.rbf import RBFKernel
-from functional_solver.kernel.polynomial import PolynomialKernel
-from functional_solver.inner_product.base import InnerProduct
-from functional_solver.solver.functional_solver import FunctionalSolver
+from geomfit.core.data_container import MultiDimData
+from geomfit.core.basis_container import BasisSet
+from geomfit.basis.factory import BasisFactory
+from geomfit.kernel.rbf import RBFKernel
+from geomfit.kernel.polynomial import PolynomialKernel
+from geomfit.inner_product.base import InnerProduct
+from geomfit.solver.functional_solver import FunctionalSolver
 
 def demo_synthetic_regression():
     """Synthetic regression data demo"""

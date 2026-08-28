@@ -21,8 +21,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/functional_solver.git
-cd functional_solver
+git clone https://github.com/MoonFoxJun/geomfit.git
+cd geomfit
 
 # (Recommended) create a virtual environment
 python -m venv .venv
@@ -44,7 +44,7 @@ pip install -e .[dev]
 
 ```python
 import numpy as np
-from functional_solver import MultiDimData, BasisSet, BasisFactory, InnerProduct, FunctionalSolver
+from geomfit import MultiDimData, BasisSet, BasisFactory, InnerProduct, FunctionalSolver
 
 # 1. Prepare data
 x = np.linspace(0, 1, 50)
@@ -78,7 +78,7 @@ For multi-dimensional problems, use `BasisFactory.tensor_product` to build produ
 
 ```python
 import numpy as np
-from functional_solver import MultiDimData, BasisSet, BasisFactory, InnerProduct, FunctionalSolver
+from geomfit import MultiDimData, BasisSet, BasisFactory, InnerProduct, FunctionalSolver
 
 # 1. Two-dimensional data (the true function contains the interaction term x*y)
 x = np.random.uniform(0, 1, 50)
@@ -107,8 +107,8 @@ z_pred = solver.predict(data)
 Tensor-product bases assume orthogonal coordinates. When data is concentrated on a narrow band (for example y ≈ x, strongly correlated), the basis columns become nearly collinear and the Gram matrix is ill-conditioned. Two built-in remedies:
 
 ```python
-from functional_solver.utils.preprocess import pca_rotate, pca_transform
-from functional_solver.kernel.mahalanobis import MahalanobisKernel
+from geomfit.utils.preprocess import pca_rotate, pca_transform
+from geomfit.kernel.mahalanobis import MahalanobisKernel
 
 # 1) PCA rotation (optionally dropping near-zero-variance directions) before expansion
 rotated, info = pca_rotate(data, n_components=1)   # leading component variance share ≈ 1
@@ -127,8 +127,8 @@ A quantitative comparison is available in [`examples/demo_correlated_dims.py`](e
 ## Project Structure
 
 ```
-functional_solver/
-├── functional_solver/       # the package (import functional_solver.*)
+geomfit/
+├── geomfit/       # the package (import geomfit.*)
 │   ├── core/                # core data structures (MultiDimData, BasisSet)
 │   ├── basis/               # basis functions (polynomial, Fourier, wavelet, RBF; tensor_product, additive)
 │   ├── kernel/              # kernels (RBF, Matern, polynomial, composite, Mahalanobis)

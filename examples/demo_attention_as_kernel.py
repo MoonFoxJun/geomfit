@@ -28,10 +28,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 import numpy as np
 import matplotlib.pyplot as plt
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.kernel.polynomial import PolynomialKernel
-from functional_solver.kernel.rbf import RBFKernel
-from functional_solver.solver.functional_solver import FunctionalSolver
+from geomfit.core.data_container import MultiDimData
+from geomfit.kernel.polynomial import PolynomialKernel
+from geomfit.kernel.rbf import RBFKernel
+from geomfit.solver.functional_solver import FunctionalSolver
 
 
 def main():

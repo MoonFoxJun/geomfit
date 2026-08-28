@@ -5,14 +5,14 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.core.basis_container import BasisSet
-from functional_solver.basis.factory import BasisFactory
-from functional_solver.inner_product.base import InnerProduct
-from functional_solver.solver.functional_solver import FunctionalSolver
-from functional_solver.solver.gram_solver import GramSolver
-from functional_solver.solver.kernel_solver import KernelSolver
-from functional_solver.kernel.rbf import RBFKernel
+from geomfit.core.data_container import MultiDimData
+from geomfit.core.basis_container import BasisSet
+from geomfit.basis.factory import BasisFactory
+from geomfit.inner_product.base import InnerProduct
+from geomfit.solver.functional_solver import FunctionalSolver
+from geomfit.solver.gram_solver import GramSolver
+from geomfit.solver.kernel_solver import KernelSolver
+from geomfit.kernel.rbf import RBFKernel
 
 def test_functional_solver_basis_method():
     """Test the FunctionalSolver basis method."""

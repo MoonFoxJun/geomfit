@@ -7,14 +7,14 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="functional_solver",
+    name="geomfit",
     version="0.1.0",
     author="Your Name",
     author_email="your.email@example.com",
     description="Function approximation and functional optimization via basis expansion and kernel methods",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/functional_solver",
+    url="https://github.com/MoonFoxJun/geomfit",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",

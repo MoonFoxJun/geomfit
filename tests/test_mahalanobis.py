@@ -5,10 +5,10 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from functional_solver.core.data_container import MultiDimData
-from functional_solver.solver.functional_solver import FunctionalSolver
-from functional_solver.kernel.mahalanobis import MahalanobisKernel
-from functional_solver.kernel.rbf import RBFKernel
+from geomfit.core.data_container import MultiDimData
+from geomfit.solver.functional_solver import FunctionalSolver
+from geomfit.kernel.mahalanobis import MahalanobisKernel
+from geomfit.kernel.rbf import RBFKernel
 
 
 def test_mahalanobis_equals_rbf_for_isotropic_metric():
