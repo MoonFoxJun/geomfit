@@ -19,6 +19,9 @@ depends only on the principal axis u = (x + y)/√2. Three approaches are compar
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')  # print Unicode math on any console (e.g. GBK Windows)
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
