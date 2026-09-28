@@ -14,7 +14,8 @@
 - **Kernel methods**: RBF, Matern, polynomial, and composite kernels, plus a `MahalanobisKernel` that absorbs data correlation into the distance metric. Kernels are naturally multi-dimensional.
 - **Configurable inner product**: Weighted inner products, discrete and continuous (with volume elements for multi-dimensional quadrature) inner products, and Gram matrix computation.
 - **Regularization**: Tikhonov, truncated SVD, Lasso, and elastic net strategies to stabilize ill-conditioned problems.
-- **Solvers**: `FunctionalSolver`, `GramSolver`, `KernelSolver`, `GradientSolver`, and `AdaptiveSolver`, covering basis, Gram, and kernel formulations.
+- **Solvers**: `FunctionalSolver`, `GramSolver`, `GridSolver`, `KernelSolver`, `GradientSolver`, and `AdaptiveSolver`, covering basis, Gram, separable-grid, and kernel formulations.
+- **Separable grid solving**: `GridSolver` detects full Cartesian grids and solves the tensor-product system as a per-dimension *sandwich* — the data tensor contracted with each dimension's basis from both sides and with each dimension's Gram matrix on the inside — replacing the O(P³) joint solve (P = ∏ I_d) by D small solves of size I_d × I_d. It falls back transparently to the joint `GramSolver` whenever the grid, the basis structure, or the inner product is not separable (scattered data, weighted inner products, additive bases).
 - **PCA preprocessing**: `pca_rotate` / `pca_transform` decouple strongly correlated dimensions before basis expansion, dramatically improving conditioning.
 
 ## Installation

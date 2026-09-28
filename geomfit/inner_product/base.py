@@ -44,6 +44,11 @@ def _trapezoid_weights(x: np.ndarray) -> np.ndarray:
     return back
 
 
+# 公共别名：分离式（网格）求解器需要复用同一条一维求积规则，
+# 以便把多维体积元拆成各维权重之积。
+trapezoid_weights = _trapezoid_weights
+
+
 class InnerProduct:
     """Definition of an inner product on a function space."""
 
